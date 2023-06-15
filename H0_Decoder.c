@@ -171,14 +171,23 @@ void slaveinit(void)
  //  LOOPLEDPORT |=(1<<LOOPLED);
 
   DDRA= 0xFF;
-    /*
-    MOTORDDR |= (1<<MOTORAUX);  // MOTORAUX als Output
-   MOTORDDR |= (1<<MOTORB);  // Output Motor PWM   
-   MOTORPORT |= (1<<MOTORB); // HI, Motor OFF
+   DEVDDR |= (1<<MOTORDIR_PIN);  // MOTORDIR_PIN als Output
+   DEVPORT &= ~(1<<MOTORDIR_PIN); // LO
 
-   MOTORDDR |= (1<<LAMPE);  // Lampe
-   MOTORPORT |= (1<<LAMPE); // HI
-*/
+   MOTORDDR |= (1<<MOTORA);  // Output Motor A 
+   MOTORPORT &= ~(1<<MOTORA); // LO
+   
+   MOTORDDR |= (1<<MOTORB);  // Output Motor B 
+   MOTORPORT &= ~(1<<MOTORB); // LO
+
+   LAMPEDDR |= (1<<LAMPEA_PIN);  // Lampe A
+   LAMPEPORT &= ~(1<<LAMPEA_PIN); // LO
+
+   LAMPEDDR |= (1<<LAMPEB_PIN);  // Lampe B
+   LAMPEPORT &= ~(1<<LAMPEB_PIN); // LO
+
+   
+   
    maxspeed =  252;//speedlookup[14];
 
 }
@@ -460,12 +469,13 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB LO wenn speed
                      if (deffunktion)
                      {
                         lokstatus |= (1<<FUNKTIONBIT);
-                        MOTORPORT |= (1<<LAMPE);
+                        
+                        DEVPORT |= (1<<LAMPEA_PIN);
                      }
                      else
                      {
                         lokstatus &= ~(1<<FUNKTIONBIT);
-                        MOTORPORT &= ~(1<<LAMPE);
+                        DEVPORT &= ~(1<<LAMPEA_PIN);
                      }
                      for (uint8_t i=0;i<8;i++)
                      {
@@ -622,14 +632,14 @@ ISR(WDT_vect) // nicht verwendet
 */
 
 
-void main (void) 
+void main (int) 
 {
    //WDT ausschalten 
    MCUSR = 0;
    wdt_disable();
    MOTORDDR |= (1<<MOTORA);  // Output Motor PWM  
-   MOTORDDR &= ~(1<<MOTORAUX);  // Input, AUX, Sniffer fuer DIR nach reset
-   if (MOTORPIN & (1<<MOTORAUX)) // AUX ist noch HI
+   DEVDDR &= ~(1<<MOTORAUX);  // Input, AUX, Sniffer fuer MOTORDIR_PIN nach reset
+   if (DEVPIN & (1<<MOTORAUX)) // AUX ist noch HI
    {
       lastDIR = 1;
       MOTORPORT |= (1<<MOTORA); 
@@ -639,13 +649,13 @@ void main (void)
    {
       lastDIR = 0;
       MOTORPORT &= ~(1<<MOTORA);
-     // loopledtakt = 0x0FFF;
+      // loopledtakt = 0x0FFF;
    }
-//   lastDIR = 1;
+   //   lastDIR = 1;
    slaveinit();
-  int0_init();
-
-  timer0(4);
+   int0_init();
+   
+   timer0(4);
    uint8_t loopcount0=0;
    uint8_t loopcount1=0;
    
@@ -657,14 +667,14 @@ void main (void)
    // WDT
    // https://bigdanzblog.wordpress.com/2015/07/20/resetting-rebooting-attiny85-with-watchdog-timer-wdt/
    /*
-   WDTCSR|=(1<<WDCE)|(1<<WDE);  // https://www.instructables.com/ATtiny85-Watchdog-reboot-Together-With-SLEEP-Andor/
-   WDTCSR=0x00; // disable watchdog
-   */
+    WDTCSR|=(1<<WDCE)|(1<<WDE);  // https://www.instructables.com/ATtiny85-Watchdog-reboot-Together-With-SLEEP-Andor/
+    WDTCSR=0x00; // disable watchdog
+    */
    // #define WDTO_15MS   0
-
- //  WDTCSR = 0xD8 | WDTO_30MS;
    
- 
+   //  WDTCSR = 0xD8 | WDTO_30MS;
+   
+   
    wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    
@@ -675,25 +685,25 @@ void main (void)
       wdt_reset();
       //Blinkanzeige
       /*
-      if (lastDIR)
-      {
-         
-      }
-      else 
-      {
-        
-      }
+       if (lastDIR)
+       {
+       
+       }
+       else 
+       {
+       
+       }
        */
       /*
-      if (loopcount0 %2 == 0)
-      {
-      OSZIALO;
-      }
-      else
-      {
-         OSZIAHI;
-      }
-      OSZIATOG;
+       if (loopcount0 %2 == 0)
+       {
+       OSZIALO;
+       }
+       else
+       {
+       OSZIAHI;
+       }
+       OSZIATOG;
        */
       loopcount0++;
       //LOOPLEDPORT ^= (1<<LOOPLED);
@@ -706,20 +716,21 @@ void main (void)
          loopcount1++;
          if (loopcount1 >= loopledtakt)
          {
-           // LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            // LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             // wdt-delay, fuer test
             wdtcounter++;
             if (wdtcounter > 60)
             {
                wdtcounter=0;
- //              _delay_ms(1000);
+               //              _delay_ms(1000);
             }
             OSZIATOG;
          }
          
       }
-       
-       //OSZIAHI;
+      
+      //OSZIAHI;
    }//while
+   return 0;
 }

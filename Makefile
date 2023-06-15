@@ -199,7 +199,7 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = STK500
+AVRDUDE_PROGRAMMER = stk500v2
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
 #AVRDUDE_PORT = /dev/tty.usbserial-usbserial-A801JIUR    # programmer connected to serial device

@@ -33,13 +33,13 @@
 #define OSZIAHI OSZIPORT |= (1<<OSZIA)
 #define OSZIATOG OSZIPORT ^= (1<<OSZIA)
 
-
+/*
 #define TESTPORT       PORTB
 #define TESTDDR        DDRB
 
 #define TEST0     0
 #define TEST1     1
-
+*/
 
 
 
@@ -52,19 +52,24 @@
 
 #define MOTORA      0
 #define MOTORB      1
-#define LAMPE         2
-#define MOTORAUX      3
 
 
 #define DEVPORT   PORTA
 #define DEVDDR    DDRA
 #define DEVPIN    PINA
 
-#define LAMPA  2
-#define LAMPB  3
 
-#define DIR    1
-#define AUX    0
+#define MOTORDIR_PIN    1
+#define MOTORAUX    0
+
+
+
+#define LAMPEPORT PORTA
+#define LAMPEDDR  DDRA
+#define LAMPEPIN   PINA
+
+#define LAMPEA_PIN  2
+#define LAMPEB_PIN  3
 
 
 // Bits
@@ -90,7 +95,7 @@
 #define RICHTUNGBIT  6
 #define STARTDELAYBIT  7
 
-#define STARTDELAY 100
+//#define STARTDELAY 100
 
 #define TRIT0 0
 #define TRIT1 1
@@ -98,13 +103,13 @@
 #define TRIT3 3
 #define TRIT4 4
 
-#define HI_IMPULSDAUER 10
-#define LO_IMPULSDAUER 20
+//#define HI_IMPULSDAUER 10
+//#define LO_IMPULSDAUER 20
 
-#define INPIN     PINA
+#define INPIN        PINA
 #define INT0_START   0
-#define INT0_END   1
-#define INT0_WAIT 2
+#define INT0_END     1
+#define INT0_WAIT    2
 
 #define INT0_PAKET_A 4
 #define INT0_PAKET_B 5
