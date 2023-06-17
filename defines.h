@@ -9,9 +9,9 @@
 #define defines_h
 
 
-#define LOOPLEDPORT     PORTB
-#define LOOPLEDDDR      DDRB
-#define LOOPLED         7 // 
+#define LOOPLEDPORT     PORTA
+#define LOOPLEDDDR      DDRA
+#define LOOPLED         3 // 
 
 #define INT0_RISING      0
 #define INT0_FALLING      1
@@ -50,8 +50,8 @@
 
 //PINS
 
-#define MOTORA      0
-#define MOTORB      1
+#define MOTORA_PIN      0
+#define MOTORB_PIN      1
 
 
 #define DEVPORT   PORTA
@@ -69,7 +69,9 @@
 #define LAMPEPIN   PINA
 
 #define LAMPEA_PIN  2
-#define LAMPEB_PIN  3
+#define LAMPEB_PIN  4
+
+#define LEDPWM    50
 
 
 // Bits
@@ -93,7 +95,7 @@
 #define FUNKTIONBIT  4
 #define OLDRICHTUNGBIT  5
 #define RICHTUNGBIT  6
-#define STARTDELAYBIT  7
+#define CHANGEBIT      7  
 
 //#define STARTDELAY 100
 
