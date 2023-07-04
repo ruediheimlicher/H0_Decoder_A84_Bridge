@@ -11,7 +11,7 @@
 
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
-#define LOOPLED         3 // 
+#define LOOPLED         4 // 
 
 #define INT0_RISING      0
 #define INT0_FALLING      1
@@ -69,7 +69,7 @@
 #define LAMPEPIN   PINA
 
 #define LAMPEA_PIN  2
-#define LAMPEB_PIN  4
+#define LAMPEB_PIN  3
 
 #define LEDPWM    50
 
@@ -92,6 +92,7 @@
 
 #define ADDRESSBIT   0
 #define DATABIT      2
+#define VORBIT       3 // eingestellte richtung
 #define FUNKTIONBIT  4
 #define OLDRICHTUNGBIT  5
 #define RICHTUNGBIT  6

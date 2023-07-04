@@ -93,6 +93,7 @@ volatile uint8_t   rawdataB = 0;
 //volatile uint32_t   oldrawdata = 0;
 
 volatile uint8_t   speed = 0;
+volatile uint8_t   oldspeed = 0;
 
 volatile uint8_t   dimm = 0; // LED dimmwert
 volatile uint8_t   ledpwm = 0; // LED PWM
@@ -119,7 +120,7 @@ volatile uint8_t   wdtcounter = 0;
 volatile uint8_t   taskcounter = 0;
 
 // linear
-//volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
+volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
 
 
 //volatile uint8_t   speedlookup[15] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140};
@@ -132,8 +133,8 @@ volatile uint8_t   taskcounter = 0;
 // linear mit offset 30
 //volatile uint8_t   speedlookup[15] = {0,33,37,40,44,47,51,55,58,62,65,69,72,76,80};
 
-// linear mit offset 22
-volatile uint8_t   speedlookup[15] = {0,26,30,34,38,42,46,51,55,59,63,67,71,75,80};
+// linear mit offset 22  Diesel
+//volatile uint8_t   speedlookup[15] = {0,26,30,34,38,42,46,51,55,59,63,67,71,75,80};
 
 
 
@@ -314,8 +315,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    // MARK: TIMER0 TIMER2_COMPA INT0
    if (INT0status & (1<<INT0_WAIT))
    {
-      waitcounter++;
-      if (waitcounter > 2)
+      waitcounter++; 
+      if (waitcounter > 2)// Impulsdauer > minimum
       {
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
@@ -438,6 +439,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                {
                   if (lokadresseB == LOK_ADRESSE)
                   {
+                     OSZIALO;
                      // Daten uebernehmen
                      //   STATUSPORT |= (1<<DATAOK); // LED ON
                      //  STATUSPORT |= (1<<ADDRESSOK); // LED ON
@@ -459,6 +461,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                         lokstatus &= ~(1<<FUNKTIONBIT);
                         //DEVPORT &= ~(1<<LAMPEA_PIN);
                      }
+                     // deflokdata aufbauen
                      for (uint8_t i=0;i<8;i++)
                      {
                         //if ((rawdataB & (1<<(2+i))))
@@ -472,15 +475,29 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                         }
                      }
                      
+                     
                      // Richtung
-                     if (deflokdata == 0x03) // Wert 1, Richtung togglen
+                     if (deflokdata == 0x03) // Wert 1, > Richtung togglen
                      {
                         if (!(lokstatus & (1<<RICHTUNGBIT)))
                         {
-                           lokstatus |= (1<<RICHTUNGBIT);
+                           lokstatus |= (1<<RICHTUNGBIT); // Vorgang starten, speed auf 0 setzen
                            richtungcounter = 0xFF;
+                           oldspeed = speed; // behalten
                            speed = 0;
-                           DEVPORT ^= (1<<MOTORDIR_PIN); // Richtung umpolen
+                           //DEVPORT ^= (1<<MOTORDIR_PIN); // Richtung umpolen
+                           if(DEVPORT & (1<<MOTORDIR_PIN))
+                           {
+                              lokstatus &= ~(1<<VORBIT); // Rueckwaerts
+                              DEVPORT &= ~(1<<MOTORDIR_PIN);
+                           }
+                            else 
+                            {
+                               lokstatus |= (1<<VORBIT); // Vorwaerts
+                               DEVPORT |= (1<<MOTORDIR_PIN);
+                            }
+                           
+                           
                            lokstatus |= (1<<CHANGEBIT);
                            taskcounter++;
                            if (lokstatus & (1<<FUNKTIONBIT))
@@ -492,62 +509,70 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                      } // deflokdata == 0x03
                      else 
                      {  
-                        lokstatus &= ~(1<<RICHTUNGBIT); 
-// MARK: speed                           
-                        switch (deflokdata)
+                        lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
+// MARK: speed           
+                        if(deflokdata == 0)
                         {
-                           case 0:
-                              speedcode = 0;
-                              break;
-                           case 0x0C:
-                              speedcode = 1;
-                              break;
-                           case 0x0F:
-                              speedcode = 2;
-                              break;
-                           case 0x30:
-                              speedcode = 3;
-                              break;
-                           case 0x33:
-                              speedcode = 4;
-                              break;
-                           case 0x3C:
-                              speedcode = 5;
-                              break;
-                           case 0x3F:
-                              speedcode = 6;
-                              break;
-                           case 0xC0:
-                              speedcode = 7;
-                              break;
-                           case 0xC3:
-                              speedcode = 8;
-                              break;
-                           case 0xCC:
-                              speedcode = 9;
-                              break;
-                           case 0xCF:
-                              speedcode = 10;
-                              break;
-                           case 0xF0:
-                              speedcode = 11;
-                              break;
-                           case 0xF3:
-                              speedcode = 12;
-                              break;
-                           case 0xFC:
-                              speedcode = 13;
-                              break;
-                           case 0xFF:
-                              speedcode = 14;
-                              break;
-                           default:
-                              speedcode = 0;
-                              break;
-                              
+                           speed = oldspeed;
                         }
-                        speed = speedlookup[speedcode];
+                        else
+                        {
+                           switch (deflokdata)
+                           {
+                              case 0:
+                                 speedcode = 0;
+                                 break;
+                              case 0x0C:
+                                 speedcode = 1;
+                                 break;
+                              case 0x0F:
+                                 speedcode = 2;
+                                 break;
+                              case 0x30:
+                                 speedcode = 3;
+                                 break;
+                              case 0x33:
+                                 speedcode = 4;
+                                 break;
+                              case 0x3C:
+                                 speedcode = 5;
+                                 break;
+                              case 0x3F:
+                                 speedcode = 6;
+                                 break;
+                              case 0xC0:
+                                 speedcode = 7;
+                                 break;
+                              case 0xC3:
+                                 speedcode = 8;
+                                 break;
+                              case 0xCC:
+                                 speedcode = 9;
+                                 break;
+                              case 0xCF:
+                                 speedcode = 10;
+                                 break;
+                              case 0xF0:
+                                 speedcode = 11;
+                                 break;
+                              case 0xF3:
+                                 speedcode = 12;
+                                 break;
+                              case 0xFC:
+                                 speedcode = 13;
+                                 break;
+                              case 0xFF:
+                                 speedcode = 14;
+                                 break;
+                              default:
+                                 speedcode = 0;
+                                 break;
+                                 
+                           }
+                           speed = speedlookup[speedcode];
+                        }
                      }
+                     
                   }
                   else 
                   {
@@ -592,7 +617,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       else //if (abstandcounter ) // Paket 2
       {
          abstandcounter = 0;
-         //   OSZIAHI;
+            OSZIAHI;
          //     OSZIPORT |= (1<<PAKETA); 
          //    OSZIPORT &= ~(1<<PAKETB);   
       }
@@ -661,17 +686,7 @@ void main (void)
        
        }
        */
-      /*
-       if (loopcount0 %2 == 0)
-       {
-       OSZIALO;
-       }
-       else
-       {
-       OSZIAHI;
-       }
-       OSZIATOG;
-       */
+      
       loopcount0++;
       
       if (loopcount0>=loopledtakt)
@@ -682,9 +697,9 @@ void main (void)
          loopcount1++;
          if (loopcount1 >= loopledtakt)
          {
-             LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
-              //OSZIATOG;
+            //OSZIATOG;
          }
          
          // Lampen einstellen
@@ -714,14 +729,16 @@ void main (void)
                LAMPEPORT &= ~(1<<LAMPEB_PIN);
             }
          }// if (DEVPIN & (1<<MOTORDIR_PIN))
-
+         
          if (deflokadresse == LOK_ADRESSE)
          {
-            OSZIATOG;
+            //OSZIATOG;
          }
          else
-            OSZIAHI;
-
+         {
+            //OSZIAHI;
+         }
+         
          
       }
       
