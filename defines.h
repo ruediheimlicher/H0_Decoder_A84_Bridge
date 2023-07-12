@@ -59,8 +59,7 @@
 #define DEVPIN    PINA
 
 
-#define MOTORDIR_PIN    1
-#define MOTORAUX    0
+//#define MOTORDIR_PIN    1
 
 
 

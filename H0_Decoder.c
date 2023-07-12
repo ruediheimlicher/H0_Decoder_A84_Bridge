@@ -169,8 +169,8 @@ void slaveinit(void)
    MOTORDDR |= (1<<MOTORB_PIN);  // Output Motor B 
    MOTORPORT &= ~(1<<MOTORB_PIN); // LO
 
-   DEVDDR |= (1<<MOTORDIR_PIN);  // MOTORDIR_PIN als Output
-   DEVPORT &= ~(1<<MOTORDIR_PIN); // LO
+//   DEVDDR |= (1<<MOTORDIR_PIN);  // MOTORDIR_PIN als Output
+//   DEVPORT &= ~(1<<MOTORDIR_PIN); // LO
 
    LAMPEDDR |= (1<<LAMPEA_PIN);  // Lampe A
    LAMPEPORT &= ~(1<<LAMPEA_PIN); // LO
@@ -296,7 +296,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    
    if (motorPWM >= 254) //ON, neuer Motorimpuls
    {
-      if(DEVPORT & (1<<MOTORDIR_PIN)) // Richtungbit gesetzt
+      //if(DEVPORT & (1<<MOTORDIR_PIN)) // Richtungbit gesetzt
+      if(lokstatus & (1<<VORBIT))  
       {
          MOTORPORT |= (1<<MOTORA_PIN);
          MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
@@ -486,15 +487,16 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            oldspeed = speed; // behalten
                            speed = 0;
                            //DEVPORT ^= (1<<MOTORDIR_PIN); // Richtung umpolen
-                           if(DEVPORT & (1<<MOTORDIR_PIN))
+                           //if(DEVPORT & (1<<MOTORDIR_PIN))
+                            if(lokstatus & (1<<VORBIT))  
                            {
                               lokstatus &= ~(1<<VORBIT); // Rueckwaerts
-                              DEVPORT &= ~(1<<MOTORDIR_PIN);
+                              //DEVPORT &= ~(1<<MOTORDIR_PIN);
                            }
                             else 
                             {
                                lokstatus |= (1<<VORBIT); // Vorwaerts
-                               DEVPORT |= (1<<MOTORDIR_PIN);
+                               //DEVPORT |= (1<<MOTORDIR_PIN);
                             }
                            
                            
@@ -511,11 +513,13 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                      {  
                         lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
 // MARK: speed           
+                        /*
                         if(deflokdata == 0)
                         {
                            speed = oldspeed;
                         }
                         else
+                         */
                         {
                            switch (deflokdata)
                            {
@@ -703,7 +707,8 @@ void main (void)
          }
          
          // Lampen einstellen
-         if(DEVPIN & (1<<MOTORDIR_PIN))
+         //if(DEVPIN & (1<<MOTORDIR_PIN))
+            if(lokstatus & (1<<VORBIT)) 
          {
             if (lokstatus & (1<<FUNKTIONBIT))
             {
