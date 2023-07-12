@@ -506,7 +506,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            }
                            
                         }
-                     } // deflokdata == 0x03
+                     } // if deflokdata == 0x03
                      else 
                      {  
                         lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
