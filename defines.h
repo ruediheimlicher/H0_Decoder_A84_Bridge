@@ -59,7 +59,6 @@
 #define DEVPIN    PINA
 
 
-//#define MOTORDIR_PIN    1
 
 
 
@@ -91,7 +90,7 @@
 
 #define ADDRESSBIT   0
 #define DATABIT      2
-#define VORBIT       3 // eingestellte richtung
+#define VORBIT       3 // eingestellte Richtung
 #define FUNKTIONBIT  4
 #define OLDRICHTUNGBIT  5
 #define RICHTUNGBIT  6
