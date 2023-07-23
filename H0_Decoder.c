@@ -120,10 +120,10 @@ volatile uint8_t   wdtcounter = 0;
 volatile uint8_t   taskcounter = 0;
 
 // linear
-volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
+//volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
 
 
-//volatile uint8_t   speedlookup[15] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140};
+volatile uint8_t   speedlookup[15] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140};
 // linear 100
 //volatile uint8_t   speedlookup[15] = {0,7,14,21,28,35,42,50,57,64,71,78,85,92,100};
 
@@ -225,6 +225,7 @@ void timer0 (uint8_t wert)
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
 {
+   
    //return;
    //OSZIATOG;
    if (INT0status == 0) // neue Daten beginnen
@@ -273,6 +274,7 @@ ISR(EXT_INT0_vect)
       abstandcounter = 0; 
       waitcounter = 0;
  //     OSZIALO;
+      sei();
    }
 }
 
@@ -287,7 +289,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
-      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+      // beide HI, break
+      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI, break
       MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
       
    }
@@ -297,12 +300,12 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       if(lokstatus & (1<<VORBIT))  
       {
          MOTORPORT |= (1<<MOTORA_PIN);
-         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, ON
       }
       else 
       {
          MOTORPORT |= (1<<MOTORB_PIN);
-         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, ON        
       }
       
       motorPWM = 0;
@@ -576,6 +579,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                      // aussteigen
                      //deflokdata = 0xCA;
                      INT0status = 0;
+                     //sei();
                      return;
                   }
                }
@@ -585,6 +589,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                   // aussteigen
                   //deflokdata = 0xCA;
                   INT0status = 0;
+                  //sei();
                   return;
                   
                }
@@ -628,10 +633,12 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
          //OSZIBHI; //pause detektiert
          pausecounter = 0;
          INT0status = 0; //Neue Daten abwarten
+         //sei();
          return;
       }
       
    } // input LO
+   //sei();
 } // TIM0
 
 
@@ -643,6 +650,8 @@ void main (void)
      //   lastDIR = 1;
    slaveinit();
    int0_init();
+   
+   
    
    timer0(4);
    uint8_t loopcount0=0;

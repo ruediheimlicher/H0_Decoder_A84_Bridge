@@ -89,6 +89,7 @@
 
 
 #define ADDRESSBIT   0
+#define FIRSTRUN     1
 #define DATABIT      2
 #define VORBIT       3 // eingestellte Richtung
 #define FUNKTIONBIT  4
