@@ -193,7 +193,7 @@ void int0_init(void)
    
    //INT0status |= (1<<INT0_RISING);
    INT0status = 0;
-   sei();
+   //sei();
 }
 
 
