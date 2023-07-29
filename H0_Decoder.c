@@ -193,7 +193,7 @@ void int0_init(void)
    
    //INT0status |= (1<<INT0_RISING);
    INT0status = 0;
-   sei();
+   //sei();
 }
 
 
@@ -237,7 +237,7 @@ ISR(EXT_INT0_vect)
       //OSZIPORT &= ~(1<<PAKETA); 
       //TESTPORT &= ~(1<<TEST2);
   //    OSZIALO; 
- //     OSZIBLO;
+      OSZIBLO;
       
       
       pausecounter = 0; // pausen detektieren, reset fuer jedes HI
@@ -274,15 +274,19 @@ ISR(EXT_INT0_vect)
       abstandcounter = 0; 
       waitcounter = 0;
  //     OSZIALO;
-      sei();
+ //     sei();
    }
 }
 
 // MARK: ISR Timer0
 ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 {
-   //OSZIATOG;
-   //return;
+   if(lokstatus & (1<<FIRSTRUNBIT))  
+   {
+      //OSZIATOG;
+      return;
+      
+   }   
    if (speed)
    {
       motorPWM++;
@@ -319,6 +323,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       waitcounter++; 
       if (waitcounter > 2)// Impulsdauer > minimum
       {
+         OSZIBHI;
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -343,9 +348,9 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                {
                   rawfunktionA &= ~(1<<(tritposition-8)); // bit ist 0
                }
-
+               
             }
-
+            
             else
             {
                if (INPIN & (1<<DATAPIN)) // Pin HI, 
@@ -435,7 +440,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
             {
                
                
-// MARK: EQUAL
+               // MARK: EQUAL
                if (lokadresseA && ((rawfunktionA == rawfunktionB) && (rawdataA == rawdataB) && (lokadresseA == lokadresseB))) // Lokadresse > 0 und Lokadresse und Data OK
                {
                   if (lokadresseB == LOK_ADRESSE)
@@ -485,15 +490,16 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            lokstatus |= (1<<RICHTUNGBIT); // Vorgang starten, speed auf 0 setzen
                            richtungcounter = 0xFF;
                            oldspeed = speed; // behalten
+                           
                            speed = 0;
-                            if(lokstatus & (1<<VORBIT))  
+                           if(lokstatus & (1<<VORBIT))  
                            {
                               lokstatus &= ~(1<<VORBIT); // Rueckwaerts
                            }
-                            else 
-                            {
-                               lokstatus |= (1<<VORBIT); // Vorwaerts
-                            }
+                           else 
+                           {
+                              lokstatus |= (1<<VORBIT); // Vorwaerts
+                           }
                            
                            
                            lokstatus |= (1<<CHANGEBIT);
@@ -504,17 +510,18 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            }
                            
                         }
+                        
                      } // deflokdata == 0x03
                      else 
                      {  
                         lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
-// MARK: speed           
+                        // MARK: speed           
                         /*
-                        if(deflokdata == 0)
-                        {
-                           speed = oldspeed;
-                        }
-                        else
+                         if(deflokdata == 0)
+                         {
+                         speed = oldspeed;
+                         }
+                         else
                          */
                         {
                            switch (deflokdata)
@@ -608,7 +615,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    
    if (INPIN & (1<<DATAPIN)) // Pin HI, input   im Gang
    {
-//      HIimpulsdauer++; // zaehlen
+      //      HIimpulsdauer++; // zaehlen
    }
    else  // LO, input fertig, Bilanz
    {
@@ -619,7 +626,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       else //if (abstandcounter ) // Paket 2
       {
          abstandcounter = 0;
-            OSZIAHI;
+         OSZIAHI;
          //     OSZIPORT |= (1<<PAKETA); 
          //    OSZIPORT &= ~(1<<PAKETB);   
       }
@@ -648,6 +655,7 @@ void main (void)
    MCUSR = 0;
    wdt_disable();
      //   lastDIR = 1;
+   lokstatus |= (1<<FIRSTRUNBIT); // firstrun ON
    slaveinit();
    int0_init();
    
@@ -676,6 +684,7 @@ void main (void)
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
+   
    sei();
    while (1)
    {	
@@ -701,8 +710,13 @@ void main (void)
          //LOOPLEDPORT ^= (1<<LOOPLED); 
          loopcount0=0;
          loopcount1++;
-         if (loopcount1 >= loopledtakt)
+         if (loopcount1 >= 4*loopledtakt)
          {
+            if(lokstatus & (1<<FIRSTRUNBIT))
+            {
+               lokstatus &= ~(1<<FIRSTRUNBIT); // Firstrun OFF
+            }
+            
             LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
