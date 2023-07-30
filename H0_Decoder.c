@@ -235,7 +235,7 @@ ISR(EXT_INT0_vect)
       INT0status |= (1<<INT0_PAKET_A); // erstes Paket lesen
       //OSZIPORT &= ~(1<<PAKETA); 
       //TESTPORT &= ~(1<<TEST2);
-  //    OSZIALO; 
+      OSZIALO; 
  //     OSZIBLO;
       
       
@@ -314,8 +314,9 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    if (INT0status & (1<<INT0_WAIT))
    {
       waitcounter++; 
-      if (waitcounter > 2)// Impulsdauer > minimum
+      if (waitcounter > 3)// Impulsdauer > minimum
       {
+         OSZIAHI;
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -437,7 +438,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                {
                   if (lokadresseB == LOK_ADRESSE)
                   {
-                     OSZIALO;
+                     //OSZIALO;
                      // Daten uebernehmen
                      //   STATUSPORT |= (1<<DATAOK); // LED ON
                      //  STATUSPORT |= (1<<ADDRESSOK); // LED ON
