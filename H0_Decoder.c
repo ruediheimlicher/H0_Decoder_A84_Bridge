@@ -222,6 +222,114 @@ void timer0 (uint8_t wert)
    //sei();
 } 
 
+void timer1(void)
+{
+   // FastPWM 8bit
+  // TCCR1A |= (1<<WGM10);
+   //TCCR1B |= (1<<WGM12);
+   TCCR1B |= (1<<CS12);
+   //TCCR1B |= (1<<CS10);
+   
+   TCNT1 = 0;
+   OCR1A = 0;
+   OCR1B = 254;
+   
+ //  TIMSK1 |= (1<<OCIE1A); // interrupt on OCR1A
+//   TIMSK1 |= (1<<OCIE1B); // interrupt on OCR1B
+   TIMSK1 |= (1<<TOIE1); // overflow interrupt
+   
+}// timer1
+
+ISR(TIM1_COMPA_vect) // 
+{
+   OSZIALO; 
+   
+   MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI, OFF
+   MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+
+   return;
+   if(lokstatus & (1<<VORBIT))  
+   {
+      MOTORPORT |= (1<<MOTORA_PIN);
+      MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+   }
+   else 
+   {
+      MOTORPORT |= (1<<MOTORB_PIN);
+      MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+   }
+
+}
+
+ISR(TIM1_COMPB_vect) // 
+{
+   OSZIAHI; 
+   if(lokstatus & (1<<VORBIT))  
+   {
+      MOTORPORT |= (1<<MOTORA_PIN);
+      
+      MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, ON
+   }
+   else 
+   {
+      MOTORPORT |= (1<<MOTORB_PIN);
+      MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+   }
+
+//   MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI, OFF
+//   MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+
+}
+
+ISR(TIM1_OVF_vect)
+{
+   OSZIATOG; 
+   if (speed)
+   {
+      motorPWM++;
+   }
+   if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
+   {
+      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+      
+   }
+   
+   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   {
+      if(lokstatus & (1<<VORBIT))  
+      {
+         MOTORPORT |= (1<<MOTORA_PIN);
+         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+      }
+      else 
+      {
+         MOTORPORT |= (1<<MOTORB_PIN);
+         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+      }
+      
+      motorPWM = 0;
+      
+   }
+
+   //MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI, OFF
+   //MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+   /*
+   if(lokstatus & (1<<VORBIT))  
+   {
+      MOTORPORT |= (1<<MOTORA_PIN);
+      MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+   }
+   else 
+   {
+      MOTORPORT |= (1<<MOTORB_PIN);
+      MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+   }
+*/
+   
+   
+}
+
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
 {
@@ -229,7 +337,7 @@ ISR(EXT_INT0_vect)
    //OSZIATOG;
    if (INT0status == 0) // neue Daten beginnen
    {
-      OSZIALO; 
+      //OSZIALO; 
       INT0status |= (1<<INT0_START);
       INT0status |= (1<<INT0_WAIT); // delay, um Wert des Eingangs zum richtigen Zeitpunkt zu messen
       
@@ -263,7 +371,7 @@ ISR(EXT_INT0_vect)
       deffunktiondata=0;
       */
  //     HIimpulsdauer = 0;
-      OSZIAHI;
+      //OSZIAHI;
    } 
    
    else // Data in Gang, neuer Interrupt
@@ -284,6 +392,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 {
    //OSZIATOG;
    //return;
+   /*
    if (speed)
    {
       motorPWM++;
@@ -311,7 +420,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       motorPWM = 0;
       
    }
-   
+   */
    
    // MARK: TIMER0 TIMER2_COMPA INT0
    if (INT0status & (1<<INT0_WAIT))
@@ -583,6 +692,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                                  
                            }
                            speed = speedlookup[speedcode];
+                           OCR1A = speed;
                         }
                      }
                      
@@ -661,6 +771,7 @@ void main (void)
    int0_init();
    
    timer0(4);
+   timer1();
    uint8_t loopcount0=0;
    uint8_t loopcount1=0;
    
