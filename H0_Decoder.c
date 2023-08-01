@@ -229,13 +229,14 @@ ISR(EXT_INT0_vect)
    //OSZIATOG;
    if (INT0status == 0) // neue Daten beginnen
    {
+      OSZIALO; 
       INT0status |= (1<<INT0_START);
       INT0status |= (1<<INT0_WAIT); // delay, um Wert des Eingangs zum richtigen Zeitpunkt zu messen
       
       INT0status |= (1<<INT0_PAKET_A); // erstes Paket lesen
       //OSZIPORT &= ~(1<<PAKETA); 
       //TESTPORT &= ~(1<<TEST2);
-      OSZIALO; 
+      
  //     OSZIBLO;
       
       
@@ -262,7 +263,7 @@ ISR(EXT_INT0_vect)
       deffunktiondata=0;
       */
  //     HIimpulsdauer = 0;
- //     OSZIAHI;
+      OSZIAHI;
    } 
    
    else // Data in Gang, neuer Interrupt
@@ -316,7 +317,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       waitcounter++; 
       if (waitcounter > 3)// Impulsdauer > minimum
       {
-         OSZIAHI;
+         //OSZIAHI;
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -341,7 +342,6 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                {
                   rawfunktionA &= ~(1<<(tritposition-8)); // bit ist 0
                }
-
             }
 
             else
@@ -478,33 +478,46 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                      // Richtung
                      if (deflokdata == 0x03) // Wert 1, > Richtung togglen
                      {
-                        if (!(lokstatus & (1<<RICHTUNGBIT)))
+                        if (!(lokstatus & (1<<RICHTUNGBIT))) // Start Richtungswechsel
                         {
                            lokstatus |= (1<<RICHTUNGBIT); // Vorgang starten, speed auf 0 setzen
-                           richtungcounter = 0xFF;
+                           richtungcounter = 0;
                            oldspeed = speed; // behalten
                            speed = 0;
-                            if(lokstatus & (1<<VORBIT))  
+                           if(lokstatus & (1<<VORBIT))  
                            {
                               lokstatus &= ~(1<<VORBIT); // Rueckwaerts
                            }
-                            else 
-                            {
-                               lokstatus |= (1<<VORBIT); // Vorwaerts
-                            }
+                           else if (!(lokstatus & (1<<VORBIT)))
+                           {
+                              lokstatus |= (1<<VORBIT); // Vorwaerts
+                           }
                            
                            
                            lokstatus |= (1<<CHANGEBIT);
+                           /*
                            taskcounter++;
                            if (lokstatus & (1<<FUNKTIONBIT))
                            {
                               taskcounter += 10;
                            }
-                           
+                           */
+                        } // if !(lokstatus & (1<<RICHTUNGBIT)
+                        /*
+                        else
+                        {
+                           richtungcounter++;
+                           if (richtungcounter > 4)
+                           {
+                              lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
+                              richtungcounter = 0;
+                           }
                         }
+                         */
                      } // deflokdata == 0x03
                      else 
                      {  
+                        
                         lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
 // MARK: speed           
                         /*

@@ -84,10 +84,6 @@
 #define FUNKTIONSTATUS 2
 
 
-
-
-
-
 #define ADDRESSBIT   0
 #define DATABIT      2
 #define VORBIT       3 // eingestellte Richtung
@@ -107,7 +103,7 @@
 //#define HI_IMPULSDAUER 10
 //#define LO_IMPULSDAUER 20
 
-#define INPIN        PINA
+//#define INPIN        PINA
 #define INT0_START   0
 #define INT0_END     1
 #define INT0_WAIT    2
