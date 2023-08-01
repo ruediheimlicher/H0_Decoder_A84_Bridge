@@ -277,6 +277,8 @@ ISR(EXT_INT0_vect)
    }
 }
 
+
+
 // MARK: ISR Timer0
 ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 {
@@ -482,8 +484,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                         {
                            lokstatus |= (1<<RICHTUNGBIT); // Vorgang starten, speed auf 0 setzen
                            richtungcounter = 0;
-                           oldspeed = speed; // behalten
-                           speed = 0;
+                           //oldspeed = speed; // behalten
+                           //speed = 0;
                            if(lokstatus & (1<<VORBIT))  
                            {
                               lokstatus &= ~(1<<VORBIT); // Rueckwaerts
