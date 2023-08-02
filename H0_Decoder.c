@@ -94,6 +94,8 @@ volatile uint8_t   rawdataB = 0;
 
 volatile uint8_t   speed = 0;
 volatile uint8_t   oldspeed = 0;
+volatile uint8_t  newspeed = 0;
+volatile int8_t speedintervall = 0;
 
 volatile uint8_t   dimm = 0; // LED dimmwert
 volatile uint8_t   ledpwm = 0; // LED PWM
@@ -120,7 +122,7 @@ volatile uint8_t   wdtcounter = 0;
 volatile uint8_t   taskcounter = 0;
 
 // linear
-volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
+//volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
 
 
 //volatile uint8_t   speedlookup[15] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140};
@@ -149,6 +151,13 @@ volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,2
 
 // log 100
 //volatile uint8_t   speedlookup[14] = {0,25,40,51,59,66,71,76,81,85,88,91,94,97,100};
+
+// log 36/120
+//volatile uint8_t   speedlookup[15] = {0,37,38,41,44,48,52,58,64,72,80,89,98,109,120};
+
+// log 44/120
+volatile uint8_t   speedlookup[15] = {0,45,46,48,51,55,59,64,70,76,84,92,100,110,120};
+
 volatile uint8_t   maxspeed =  252;
 
 volatile uint8_t   lastDIR =  0;
@@ -182,6 +191,11 @@ void slaveinit(void)
 
 }
 
+void setspeed(uint8_t newspeed)
+{
+   uint8_t speedintervall = 0;
+   
+}
 
 
 
@@ -196,6 +210,88 @@ void int0_init(void)
    //sei();
 }
 
+void timer1(void)
+{
+   TCCR1B |= (1<<WGM12); // CTC
+ //  TCCR1B |= (1<<CS11);
+ //  TCCR1B |= (1<<CS10);
+   TCCR1B |= (1<<CS12);
+   TIMSK1 |= (1<<TOIE1); // overflow interrupt
+   TIMSK1 |= (1<<OCIE1A); // interrupt on OCR1A
+
+   OCR1A = 20;
+
+   TCNT1 = 0;
+
+}
+
+ISR(TIM1_COMPA_vect) 
+{
+   OSZIATOG; 
+   if (speed)
+   {
+      motorPWM++;
+   }
+   if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
+   {
+      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+      
+   }
+   
+   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   {
+      if(lokstatus & (1<<VORBIT))  
+      {
+         MOTORPORT |= (1<<MOTORA_PIN);
+         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+      }
+      else 
+      {
+         MOTORPORT |= (1<<MOTORB_PIN);
+         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+      }
+      
+      motorPWM = 0;
+      
+   }
+
+   
+}
+
+ISR(TIM1_OVF_vect)
+{
+   //OSZIATOG; 
+   /*
+   if (speed)
+   {
+      motorPWM++;
+   }
+   if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
+   {
+      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+      
+   }
+   
+   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   {
+      if(lokstatus & (1<<VORBIT))  
+      {
+         MOTORPORT |= (1<<MOTORA_PIN);
+         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+      }
+      else 
+      {
+         MOTORPORT |= (1<<MOTORB_PIN);
+         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+      }
+      
+      motorPWM = 0;
+      
+   }
+    */
+}
 
 void timer0 (uint8_t wert) 
 { 
@@ -229,7 +325,7 @@ ISR(EXT_INT0_vect)
    //OSZIATOG;
    if (INT0status == 0) // neue Daten beginnen
    {
-      OSZIALO; 
+      //OSZIALO; 
       INT0status |= (1<<INT0_START);
       INT0status |= (1<<INT0_WAIT); // delay, um Wert des Eingangs zum richtigen Zeitpunkt zu messen
       
@@ -263,7 +359,7 @@ ISR(EXT_INT0_vect)
       deffunktiondata=0;
       */
  //     HIimpulsdauer = 0;
-      OSZIAHI;
+      //OSZIAHI;
    } 
    
    else // Data in Gang, neuer Interrupt
@@ -317,7 +413,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    if (INT0status & (1<<INT0_WAIT))
    {
       waitcounter++; 
-      if (waitcounter > 3)// Impulsdauer > minimum
+      if (waitcounter > 2)// Impulsdauer > minimum
       {
          //OSZIAHI;
          INT0status &= ~(1<<INT0_WAIT);
@@ -486,6 +582,9 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            richtungcounter = 0;
                            //oldspeed = speed; // behalten
                            //speed = 0;
+                           
+                           lokstatus ^= (1<<VORBIT); // Richtung togglen
+                           /*
                            if(lokstatus & (1<<VORBIT))  
                            {
                               lokstatus &= ~(1<<VORBIT); // Rueckwaerts
@@ -494,7 +593,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            {
                               lokstatus |= (1<<VORBIT); // Vorwaerts
                            }
-                           
+                           */
                            
                            lokstatus |= (1<<CHANGEBIT);
                            /*
@@ -583,6 +682,9 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                                  
                            }
                            speed = speedlookup[speedcode];
+                           oldspeed = speed; // behalten
+                           speedintervall = (newspeed - speed)>>3; // 4 teile
+                           newspeed = speedlookup[speedcode]; // zielwert
                         }
                      }
                      
@@ -630,7 +732,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       else //if (abstandcounter ) // Paket 2
       {
          abstandcounter = 0;
-            OSZIAHI;
+           // OSZIAHI;
          //     OSZIPORT |= (1<<PAKETA); 
          //    OSZIPORT &= ~(1<<PAKETB);   
       }
@@ -660,6 +762,7 @@ void main (void)
    slaveinit();
    int0_init();
    
+   timer1();
    timer0(4);
    uint8_t loopcount0=0;
    uint8_t loopcount1=0;
@@ -706,7 +809,8 @@ void main (void)
       {
          //OSZIATOG;
          //LOOPLEDPORT ^= (1<<LOOPLED); 
-         loopcount0=0;
+          
+          loopcount0=0;
          loopcount1++;
          if (loopcount1 >= loopledtakt)
          {
