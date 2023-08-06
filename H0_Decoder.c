@@ -92,10 +92,13 @@ volatile uint8_t   rawdataA = 0;
 volatile uint8_t   rawdataB = 0;
 //volatile uint32_t   oldrawdata = 0;
 
-volatile uint8_t   speed = 0;
-volatile uint8_t   oldspeed = 0;
-volatile uint8_t  newspeed = 0;
-volatile int8_t speedintervall = 0;
+volatile uint8_t     oldspeedcode = 0;
+volatile uint8_t     speed = 0;
+volatile uint8_t     oldspeed = 0;
+volatile uint8_t     newspeed = 0;
+volatile uint8_t     minspeed = 0; // Unterster Wert in speedlookup-tabelle
+
+volatile int8_t      speedintervall = 0;
 
 volatile uint8_t   dimm = 0; // LED dimmwert
 volatile uint8_t   ledpwm = 0; // LED PWM
@@ -191,11 +194,6 @@ void slaveinit(void)
 
 }
 
-void setspeed(uint8_t newspeed)
-{
-   uint8_t speedintervall = 0;
-   
-}
 
 
 
@@ -583,27 +581,10 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            //oldspeed = speed; // behalten
                            //speed = 0;
                            
-                           lokstatus ^= (1<<VORBIT); // Richtung togglen
-                           /*
-                           if(lokstatus & (1<<VORBIT))  
-                           {
-                              lokstatus &= ~(1<<VORBIT); // Rueckwaerts
-                           }
-                           else if (!(lokstatus & (1<<VORBIT)))
-                           {
-                              lokstatus |= (1<<VORBIT); // Vorwaerts
-                           }
-                           */
-                           
+    //                       lokstatus ^= (1<<VORBIT); // Richtung togglen
+                            
                            lokstatus |= (1<<CHANGEBIT);
-                           /*
-                           taskcounter++;
-                           if (lokstatus & (1<<FUNKTIONBIT))
-                           {
-                              taskcounter += 10;
-                           }
-                           */
-                        } // if !(lokstatus & (1<<RICHTUNGBIT)
+                         } // if !(lokstatus & (1<<RICHTUNGBIT)
                         /*
                         else
                         {
@@ -681,10 +662,12 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                                  break;
                                  
                            }
-                           speed = speedlookup[speedcode];
+                           //speed = speedlookup[speedcode];
                            oldspeed = speed; // behalten
-                           speedintervall = (newspeed - speed)>>3; // 4 teile
+                           
+                           speedintervall = (newspeed - speed)>>2; // 4 teile
                            newspeed = speedlookup[speedcode]; // zielwert
+                           
                         }
                      }
                      
@@ -786,6 +769,7 @@ void main (void)
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
+   minspeed = speedlookup[0];
    sei();
    while (1)
    {	
@@ -809,7 +793,39 @@ void main (void)
       {
          //OSZIATOG;
          //LOOPLEDPORT ^= (1<<LOOPLED); 
+         /*
+         if((newspeed > oldspeed)) // beschleunigen
+         {
+            if(speed < newspeed)
+            {
+               speed += speedintervall;
+            }
+            else 
+            {
+               speed = newspeed;
+               
+            }
+         }
+         else if((newspeed < oldspeed)) // bremsen
+          {
+          if(speed > newspeed)
+          {
+          speed -= speedintervall;
           
+          }
+          else 
+          {
+          speed = newspeed;
+          
+          }
+          if(speed <= minspeed)
+          {
+          speed = 0;
+          }
+          }
+
+         */
+         
           loopcount0=0;
          loopcount1++;
          if (loopcount1 >= loopledtakt)
@@ -817,6 +833,39 @@ void main (void)
             LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
+         
+            // speed var
+            if((newspeed > oldspeed)) // beschleunigen
+            {
+               if(speed < newspeed)
+               {
+                  speed += speedintervall;
+               }
+               else 
+               {
+                  speed = newspeed;
+                  
+               }
+            }
+            else if((newspeed < oldspeed)) // bremsen
+            {
+               if(speed > newspeed)
+               {
+                  speed += speedintervall;
+               }
+               else 
+               {
+                  speed = newspeed;
+                  
+               }
+            }
+
+            
+            // end speed var
+            
+            
+            
+            
          }
          
          // Lampen einstellen
