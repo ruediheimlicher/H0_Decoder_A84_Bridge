@@ -62,14 +62,14 @@
 
 
 
-#define LAMPEPORT PORTA
-#define LAMPEDDR  DDRA
-#define LAMPEPIN   PINA
+#define LAMPEPORT    PORTA
+#define LAMPEDDR     DDRA
+#define LAMPEPIN     PINA
 
-#define LAMPEA_PIN  2
-#define LAMPEB_PIN  3
+#define LAMPEA_PIN   2
+#define LAMPEB_PIN   3
 
-#define LEDPWM    50
+#define LEDPWM       50
 
 
 // Bits
@@ -85,7 +85,7 @@
 
 
 #define ADDRESSBIT   0
-#define DATABIT      2
+#define BACKBIT      2
 #define VORBIT       3 // eingestellte Richtung
 #define FUNKTIONBIT  4
 #define OLDRICHTUNGBIT  5

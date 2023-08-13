@@ -15,7 +15,9 @@
 #include "defines.h"
 //***********************************
 						
-uint8_t  LOK_ADRESSE = 0xCC; //	11001100	TrinŠr
+//uint8_t  LOK_ADRESSE = 0xCC; //	11001100	TrinŠr
+
+uint8_t  LOK_ADRESSE = 0x0F;
 //									
 //***********************************
 
@@ -223,6 +225,8 @@ void timer1(void)
 
 }
 
+
+// MARK: ISR Timer1
 ISR(TIM1_COMPA_vect) 
 {
    OSZIATOG; 
@@ -230,6 +234,7 @@ ISR(TIM1_COMPA_vect)
    {
       motorPWM++;
    }
+   cli();
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
       MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
@@ -253,9 +258,10 @@ ISR(TIM1_COMPA_vect)
       motorPWM = 0;
       
    }
-
+   sei();
    
 }
+
 
 ISR(TIM1_OVF_vect)
 {
@@ -581,12 +587,14 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            //oldspeed = speed; // behalten
                            //speed = 0;
                            
-    //                       lokstatus ^= (1<<VORBIT); // Richtung togglen
+                           lokstatus ^= (1<<VORBIT); // Richtung togglen
                             
                            lokstatus |= (1<<CHANGEBIT);
                          } // if !(lokstatus & (1<<RICHTUNGBIT)
-                        /*
-                        else
+                        
+                        
+                        /* TODO
+                        else // repetition 0x03
                         {
                            richtungcounter++;
                            if (richtungcounter > 4)
