@@ -230,6 +230,8 @@ void timer1(void)
 ISR(TIM1_COMPA_vect) 
 {
    OSZIATOG; 
+   /*
+   
    if (speed)
    {
       motorPWM++;
@@ -259,7 +261,7 @@ ISR(TIM1_COMPA_vect)
       
    }
    sei();
-   
+   */
 }
 
 
