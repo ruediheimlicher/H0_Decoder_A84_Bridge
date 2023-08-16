@@ -112,6 +112,9 @@ volatile uint8_t   deffunktion = 0;
 volatile uint8_t   waitcounter = 0;
 volatile uint8_t   richtungcounter = 0; // delay fuer Richtungsimpuls
 
+volatile uint8_t pwmpin = MOTORA_PIN;           // Motor PWM
+volatile uint8_t richtungpin = MOTORB_PIN;      // Motor Richtung
+
 //volatile uint8_t	Potwert=45;
 			//	Zaehler fuer richtige Impulsdauer
 //uint8_t				Servoposition[]={23,33,42,50,60};
@@ -121,6 +124,8 @@ volatile uint8_t   richtungcounter = 0; // delay fuer Richtungsimpuls
 //volatile uint16_t	taktimpuls=0;
 
 volatile uint8_t   motorPWM=0;
+volatile uint8_t   motorPWM_n=0;
+
 
 volatile uint8_t   wdtcounter = 0;
 
@@ -213,10 +218,10 @@ void int0_init(void)
 void timer1(void)
 {
    TCCR1B |= (1<<WGM12); // CTC
- //  TCCR1B |= (1<<CS11);
- //  TCCR1B |= (1<<CS10);
-   TCCR1B |= (1<<CS12);
-   TIMSK1 |= (1<<TOIE1); // overflow interrupt
+   TCCR1B |= (1<<CS11);
+   //TCCR1B |= (1<<CS10);
+ //  TCCR1B |= (1<<CS12);
+ //  TIMSK1 |= (1<<TOIE1); // overflow interrupt
    TIMSK1 |= (1<<OCIE1A); // interrupt on OCR1A
 
    OCR1A = 20;
@@ -229,38 +234,37 @@ void timer1(void)
 // MARK: ISR Timer1
 ISR(TIM1_COMPA_vect) 
 {
-   OSZIATOG; 
-   /*
+  // OSZIATOG; 
    
+   /*
    if (speed)
    {
-      motorPWM++;
+      motorPWM_n++;
    }
-   cli();
-   if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
+   if ((motorPWM_n > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
-      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
-      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+    OSZIAHI;
+    //  MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+    //  MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
       
    }
    
-   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   if (motorPWM_n >= 254) //ON, neuer Motorimpuls
    {
       if(lokstatus & (1<<VORBIT))  
       {
-         MOTORPORT |= (1<<MOTORA_PIN);
-         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
+      //   MOTORPORT |= (1<<MOTORA_PIN);
+      //   MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
       }
       else 
       {
-         MOTORPORT |= (1<<MOTORB_PIN);
-         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
+     //    MOTORPORT |= (1<<MOTORB_PIN);
+     //    MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
       }
-      
-      motorPWM = 0;
+      OSZIALO;
+      motorPWM_n = 0;
       
    }
-   sei();
    */
 }
 
@@ -392,13 +396,15 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
-      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
-      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
-      
+      //MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
+      //MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
+      MOTORPORT |= (1<<pwmpin);      
+
    }
    
    if (motorPWM >= 254) //ON, neuer Motorimpuls
    {
+      /*
       if(lokstatus & (1<<VORBIT))  
       {
          MOTORPORT |= (1<<MOTORA_PIN);
@@ -409,7 +415,9 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
          MOTORPORT |= (1<<MOTORB_PIN);
          MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
       }
-      
+       */
+      MOTORPORT &= ~(1<<pwmpin);
+
       motorPWM = 0;
       
    }
@@ -755,7 +763,7 @@ void main (void)
    slaveinit();
    int0_init();
    
-   timer1();
+   //timer1();
    timer0(4);
    uint8_t loopcount0=0;
    uint8_t loopcount1=0;
@@ -877,6 +885,26 @@ void main (void)
             
             
          }
+         
+         if(lokstatus & (1<<CHANGEBIT)) // Motor-Pins tauschen
+         {
+            if(pwmpin == MOTORA_PIN)
+            {
+               pwmpin = MOTORB_PIN;
+               richtungpin = MOTORA_PIN;
+             }
+            else
+            {
+               pwmpin = MOTORA_PIN;
+               richtungpin = MOTORB_PIN;
+              
+            }
+            MOTORPORT |= (1<<richtungpin); // Richtung setzen
+            
+            lokstatus &= ~(1<<CHANGEBIT);
+         }
+         
+
          
          // Lampen einstellen
          if(lokstatus & (1<<VORBIT)) 
