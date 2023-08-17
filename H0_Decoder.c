@@ -234,7 +234,7 @@ ISR(TIM1_COMPA_vect)
    {
       motorPWM++;
    }
-   cli();
+   //cli();
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
       MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
@@ -258,7 +258,7 @@ ISR(TIM1_COMPA_vect)
       motorPWM = 0;
       
    }
-   sei();
+   //sei();
    
 }
 
