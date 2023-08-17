@@ -215,93 +215,10 @@ void int0_init(void)
    //sei();
 }
 
-void timer1(void)
-{
-   TCCR1B |= (1<<WGM12); // CTC
-   TCCR1B |= (1<<CS11);
-   //TCCR1B |= (1<<CS10);
- //  TCCR1B |= (1<<CS12);
- //  TIMSK1 |= (1<<TOIE1); // overflow interrupt
-   TIMSK1 |= (1<<OCIE1A); // interrupt on OCR1A
-
-   OCR1A = 20;
-
-   TCNT1 = 0;
-
-}
 
 
-// MARK: ISR Timer1
-ISR(TIM1_COMPA_vect) 
-{
-  // OSZIATOG; 
-   
-   /*
-   if (speed)
-   {
-      motorPWM_n++;
-   }
-   if ((motorPWM_n > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
-   {
-    OSZIAHI;
-    //  MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
-    //  MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
-      
-   }
-   
-   if (motorPWM_n >= 254) //ON, neuer Motorimpuls
-   {
-      if(lokstatus & (1<<VORBIT))  
-      {
-      //   MOTORPORT |= (1<<MOTORA_PIN);
-      //   MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
-      }
-      else 
-      {
-     //    MOTORPORT |= (1<<MOTORB_PIN);
-     //    MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
-      }
-      OSZIALO;
-      motorPWM_n = 0;
-      
-   }
-   */
-}
 
 
-ISR(TIM1_OVF_vect)
-{
-   //OSZIATOG; 
-   /*
-   if (speed)
-   {
-      motorPWM++;
-   }
-   if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
-   {
-      MOTORPORT |= (1<<MOTORA_PIN); // MOTORA_PIN HI
-      MOTORPORT |= (1<<MOTORB_PIN); // MOTORB_PIN HI   
-      
-   }
-   
-   if (motorPWM >= 254) //ON, neuer Motorimpuls
-   {
-      if(lokstatus & (1<<VORBIT))  
-      {
-         MOTORPORT |= (1<<MOTORA_PIN);
-         MOTORPORT &= ~(1<<MOTORB_PIN);// MOTORB_PIN PWM, OFF
-      }
-      else 
-      {
-         MOTORPORT |= (1<<MOTORB_PIN);
-         MOTORPORT &= ~(1<<MOTORA_PIN);// MOTORA_PIN PWM, OFF        
-      }
-      
-      motorPWM = 0;
-      
-   }
-    */
-}
 
 void timer0 (uint8_t wert) 
 { 
@@ -423,7 +340,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    
    
-   // MARK: TIMER0 TIMER2_COMPA INT0
+   // MARK: TIMER0 TIMER0_COMPA INT0
    if (INT0status & (1<<INT0_WAIT))
    {
       waitcounter++; 
@@ -811,39 +728,7 @@ void main (void)
       {
          //OSZIATOG;
          //LOOPLEDPORT ^= (1<<LOOPLED); 
-         /*
-         if((newspeed > oldspeed)) // beschleunigen
-         {
-            if(speed < newspeed)
-            {
-               speed += speedintervall;
-            }
-            else 
-            {
-               speed = newspeed;
-               
-            }
-         }
-         else if((newspeed < oldspeed)) // bremsen
-          {
-          if(speed > newspeed)
-          {
-          speed -= speedintervall;
           
-          }
-          else 
-          {
-          speed = newspeed;
-          
-          }
-          if(speed <= minspeed)
-          {
-          speed = 0;
-          }
-          }
-
-         */
-         
           loopcount0=0;
          loopcount1++;
          if (loopcount1 >= loopledtakt)
@@ -867,8 +752,9 @@ void main (void)
             }
             else if((newspeed < oldspeed)) // bremsen
             {
-               if(speed > newspeed)
+               if((speed > newspeed) && ((speed + speedintervall) > 0))
                {
+                  
                   speed += speedintervall;
                }
                else 
