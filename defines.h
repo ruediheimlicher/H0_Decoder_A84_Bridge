@@ -100,8 +100,6 @@
 #define TRIT3 3
 #define TRIT4 4
 
-//#define HI_IMPULSDAUER 10
-//#define LO_IMPULSDAUER 20
 
 //#define INPIN        PINA
 #define INT0_START   0

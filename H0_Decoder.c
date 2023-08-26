@@ -248,7 +248,6 @@ void timer0 (uint8_t wert)
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
 {
-   //return;
    //OSZIATOG;
    if (INT0status == 0) // neue Daten beginnen
    {
@@ -680,7 +679,6 @@ void main (void)
    slaveinit();
    int0_init();
    
-   //timer1();
    timer0(4);
    uint8_t loopcount0=0;
    uint8_t loopcount1=0;
@@ -710,6 +708,7 @@ void main (void)
    {	
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
+      
       //Blinkanzeige
       /*
        if (lastDIR)
@@ -733,7 +732,7 @@ void main (void)
          loopcount1++;
          if (loopcount1 >= loopledtakt)
          {
-            LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
          
