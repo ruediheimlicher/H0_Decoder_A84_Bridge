@@ -174,7 +174,7 @@ volatile uint8_t   maxspeed =  252;
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
 uint8_t refreshtakt = 0x40;
-uint8_t speedchangetakt = 0x40; // takt fuer beschleunigen/bremsen
+uint16_t speedchangetakt = 0x400; // takt fuer beschleunigen/bremsen
 
 
 // https://stackoverflow.com/questions/70049553/best-way-to-handle-multiple-pcint-in-avr
@@ -188,8 +188,8 @@ void slaveinit(void)
    LOOPLEDDDR |=(1<<LOOPLED); // HI
    LOOPLEDPORT |=(1<<LOOPLED);
 
-   DDRA |=(1<<PA4); // HI
-   PORTA |=(1<<PA4);
+   DDRA |= (1<<PA4); // input
+   PORTA &= ~(1<<PA4);// LO
 
  
    MOTORDDR |= (1<<MOTORA_PIN);  // Output Motor A 
@@ -207,7 +207,7 @@ void slaveinit(void)
 
    
    
-   maxspeed =  252;//speedlookup[14];
+   maxspeed =  speedlookup[14];
 
 }
 
@@ -765,10 +765,49 @@ void main (void)
        
       if(PINA & (1 << PA7)) // Source OK
       {
-         PORTA &= ~(1<<PA4);
+         PORTA &= ~(1<<PA4); // LED on
          
+         loopcount1++;
+         if (loopcount1 >= speedchangetakt)
+         {
+            
+            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            loopcount1 = 0;
+            //OSZIATOG;
          
-      }
+            // speed var
+            if((newspeed > oldspeed)) // beschleunigen
+            {
+               if(speed < newspeed)
+               {
+                  speed += speedintervall;
+               }
+               else 
+               {
+                  speed = newspeed;
+                  
+               }
+            }
+            else if((newspeed < oldspeed)) // bremsen
+            {
+               if((speed > newspeed) && ((speed + speedintervall) > 0))
+               {
+                  
+                  speed += speedintervall;
+               }
+               else 
+               {
+                  speed = newspeed;
+                  
+               }
+            }
+            // end speed var
+          }
+         
+
+         
+      }// Source OK
+      
       else  // source down, speed up
       {
          PORTA |= (1<<PA4);
@@ -789,6 +828,7 @@ void main (void)
          //LOOPLEDPORT ^= (1<<LOOPLED); 
           
          loopcount0=0;
+         /*
          loopcount1++;
          if (loopcount1 >= speedchangetakt)
          {
@@ -824,7 +864,7 @@ void main (void)
             }
             // end speed var
           }
-         
+         */
          
          
          if(lokstatus & (1<<CHANGEBIT)) // Motor-Pins tauschen
