@@ -95,6 +95,7 @@ volatile uint8_t   rawdataB = 0;
 //volatile uint32_t   oldrawdata = 0;
 
 volatile uint8_t     oldspeedcode = 0;
+volatile uint8_t     speedcode = 0;
 volatile uint8_t     speed = 0;
 volatile uint8_t     oldspeed = 0;
 volatile uint8_t     newspeed = 0;
@@ -172,14 +173,23 @@ volatile uint8_t   maxspeed =  252;
 
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
+uint8_t refreshtakt = 0x40;
+uint8_t speedchangetakt = 0x40; // takt fuer beschleunigen/bremsen
+
+
+// https://stackoverflow.com/questions/70049553/best-way-to-handle-multiple-pcint-in-avr
+volatile uint8_t portahistory = 0xFF;     // default is high because the pull-up
 
 void slaveinit(void)
 {
- 	OSZIPORT |= (1<<OSZIA);	//Ausgang fuer OSZI A
-	OSZIDDR |= (1<<OSZIA);	//Ausgang fuer OSZI A
+ 	//OSZIPORT |= (1<<OSZIA);	//Ausgang fuer OSZI A
+	//OSZIDDR |= (1<<OSZIA);	//Ausgang fuer OSZI A
 
    LOOPLEDDDR |=(1<<LOOPLED); // HI
    LOOPLEDPORT |=(1<<LOOPLED);
+
+   DDRA |=(1<<PA4); // HI
+   PORTA |=(1<<PA4);
 
  
    MOTORDDR |= (1<<MOTORA_PIN);  // Output Motor A 
@@ -200,8 +210,6 @@ void slaveinit(void)
    maxspeed =  252;//speedlookup[14];
 
 }
-
-
 
 
 void int0_init(void)
@@ -244,6 +252,47 @@ void timer0 (uint8_t wert)
    // enable global interrupts
    //sei();
 } 
+
+
+void pcint7_init(void)
+{
+   DDRA &= ~(1<<PA7); // PA7 output
+   PORTA |= (1<<PA7); // HI
+   
+   GIMSK |= (1<<PCIE0);    // General Interrupt Mask Register enable for pin 0:7
+   PCMSK0 |= (1<<PCINT7);  // Pin Change Mask Register  for PA7
+}
+
+
+// MARK: ISR(PCINT7)
+
+ISR(PCINT7_vect) 
+{
+   if(PINA & (1 << PA7)) // Source OK
+   {
+      //LOOPLEDPORT &= ~(1<<LOOPLED);
+      PORTA &= ~(1<<PA4);
+      
+   }
+      else // source down
+      {
+      //LOOPLEDPORT |= (1<<LOOPLED);
+      PORTA |= (1<<PA4);
+         
+   }
+      /*
+   uint8_t changedbits;
+   
+   changedbits = PINA ^ portahistory;
+   portahistory = PINA;
+   
+   if(changedbits & (1 << PA7))
+       {
+          LOOPLEDPORT ^= (1<<LOOPLED);
+       }
+   
+   */
+}
 
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
@@ -475,7 +524,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                      deflokadresse = lokadresseB;
                      //deffunktion = (rawdataB & 0x03); // bit 0,1 funktion als eigene var
                      deffunktion = rawfunktionB;
-                     uint8_t speedcode = 0;
+                     
                      
                      if (deffunktion)
                      {
@@ -536,14 +585,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                         
                         lokstatus &= ~(1<<RICHTUNGBIT); // Vorgang Richtungsbit wieder beenden, 
 // MARK: speed           
-                        /*
-                        if(deflokdata == 0)
-                        {
-                           speed = oldspeed;
-                        }
-                        else
-                         */
-                        {
+                         {
                            switch (deflokdata)
                            {
                               case 0:
@@ -601,6 +643,14 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            
                            speedintervall = (newspeed - speed)>>2; // 4 teile
                            newspeed = speedlookup[speedcode]; // zielwert
+                            if(speedcode > 0)
+                            {
+                               lokstatus |= (1<<RUNBIT); // lok in bewegung
+                            }
+                            else
+                            {
+                               lokstatus &= ~(1<<RUNBIT); // lok steht still
+                            }
                            
                         }
                      }
@@ -679,9 +729,11 @@ void main (void)
    slaveinit();
    int0_init();
    
+   //pcint7_init();
+   
    timer0(4);
-   uint8_t loopcount0=0;
-   uint8_t loopcount1=0;
+   uint16_t loopcount0=0;
+   uint16_t loopcount1=0;
    
    
    //_delay_ms(2);
@@ -703,34 +755,42 @@ void main (void)
    wdt_reset();
    ledpwm = LEDPWM;
    minspeed = speedlookup[0];
+   
    sei();
    while (1)
    {	
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
       
-      //Blinkanzeige
-      /*
-       if (lastDIR)
-       {
        
-       }
-       else 
-       {
-       
-       }
-       */
+      if(PINA & (1 << PA7)) // Source OK
+      {
+         PORTA &= ~(1<<PA4);
+         
+         
+      }
+      else  // source down, speed up
+      {
+         PORTA |= (1<<PA4);
+         if((lokstatus & (1<<RUNBIT)) && (speedcode && (speedcode < 13))) // lok ist in bewegung
+         {
+            speed = speedlookup[speedcode+2];
+            
+         }
+         
+         
+      }
+      
       
       loopcount0++;
-      
-      if (loopcount0>=loopledtakt)
+      if (loopcount0>=refreshtakt)
       {
          //OSZIATOG;
          //LOOPLEDPORT ^= (1<<LOOPLED); 
           
-          loopcount0=0;
+         loopcount0=0;
          loopcount1++;
-         if (loopcount1 >= loopledtakt)
+         if (loopcount1 >= speedchangetakt)
          {
             //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
@@ -762,14 +822,10 @@ void main (void)
                   
                }
             }
-
-            
             // end speed var
-            
-            
-            
-            
-         }
+          }
+         
+         
          
          if(lokstatus & (1<<CHANGEBIT)) // Motor-Pins tauschen
          {

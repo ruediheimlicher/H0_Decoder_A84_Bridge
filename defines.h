@@ -79,16 +79,17 @@
 
 
 // lokstatus-Bits
-#define FUNKTION     0
-#define OLDFUNKTION  1
-#define FUNKTIONSTATUS 2
+//#define FUNKTION     0
+//#define OLDFUNKTION  1
+//#define FUNKTIONSTATUS 2
+
 
 
 #define ADDRESSBIT   0
 #define BACKBIT      2
 #define VORBIT       3 // eingestellte Richtung
 #define FUNKTIONBIT  4
-#define OLDRICHTUNGBIT  5
+#define RUNBIT         5  // Lok hat speed
 #define RICHTUNGBIT  6
 #define CHANGEBIT      7  
 
