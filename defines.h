@@ -71,6 +71,11 @@
 
 #define LEDPWM       50
 
+#define SNIFFPORT    PORTA 
+#define SNIFFDDR     DDRA
+#define SNIFFPIN     PINA
+
+#define SNIFF_PIN    7 // detektiert Betriebsspannung
 
 // Bits
 #define FUNKTIONOK   2

@@ -188,8 +188,11 @@ void slaveinit(void)
    LOOPLEDDDR |=(1<<LOOPLED); // HI
    LOOPLEDPORT |=(1<<LOOPLED);
 
-   DDRA |= (1<<PA4); // input
+   DDRA |= (1<<PA4); // output
    PORTA &= ~(1<<PA4);// LO
+
+   SNIFFDDR &= ~(1<<SNIFF_PIN); // input, detektiert Betriebsspannung
+   SNIFFPORT &= ~(1<<SNIFF_PIN); // LO
 
  
    MOTORDDR |= (1<<MOTORA_PIN);  // Output Motor A 
@@ -256,7 +259,7 @@ void timer0 (uint8_t wert)
 
 void pcint7_init(void)
 {
-   DDRA &= ~(1<<PA7); // PA7 output
+   DDRA &= ~(1<<PA7); // PA7 input
    PORTA |= (1<<PA7); // HI
    
    GIMSK |= (1<<PCIE0);    // General Interrupt Mask Register enable for pin 0:7
@@ -642,6 +645,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            oldspeed = speed; // behalten
                            
                            speedintervall = (newspeed - speed)>>2; // 4 teile
+                            
                            newspeed = speedlookup[speedcode]; // zielwert
                             if(speedcode > 0)
                             {
@@ -720,7 +724,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 } // TIM0
 
 
-void main (void) 
+int main (void) 
 {
    //WDT ausschalten 
    MCUSR = 0;
@@ -763,7 +767,7 @@ void main (void)
       wdt_reset();
       
        
-      if(PINA & (1 << PA7)) // Source OK
+      if(SNIFFPIN & (1 << SNIFF_PIN)) // Source OK
       {
          PORTA &= ~(1<<PA4); // LED on
          
@@ -785,27 +789,22 @@ void main (void)
                else 
                {
                   speed = newspeed;
-                  
                }
             }
             else if((newspeed < oldspeed)) // bremsen
             {
                if((speed > newspeed) && ((speed + speedintervall) > 0))
                {
-                  
                   speed += speedintervall;
                }
                else 
                {
                   speed = newspeed;
-                  
                }
             }
             // end speed var
-          }
-         
-
-         
+          } // loopcount1 >= speedchangetakt
+           
       }// Source OK
       
       else  // source down, speed up
@@ -814,11 +813,9 @@ void main (void)
          if((lokstatus & (1<<RUNBIT)) && (speedcode && (speedcode < 13))) // lok ist in bewegung
          {
             speed = speedlookup[speedcode+2];
-            
-         }
-         
-         
-      }
+         }         
+      } // source not OK
+      
       
       
       loopcount0++;
@@ -828,45 +825,7 @@ void main (void)
          //LOOPLEDPORT ^= (1<<LOOPLED); 
           
          loopcount0=0;
-         /*
-         loopcount1++;
-         if (loopcount1 >= speedchangetakt)
-         {
-            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
-            loopcount1 = 0;
-            //OSZIATOG;
-         
-            // speed var
-            if((newspeed > oldspeed)) // beschleunigen
-            {
-               if(speed < newspeed)
-               {
-                  speed += speedintervall;
-               }
-               else 
-               {
-                  speed = newspeed;
-                  
-               }
-            }
-            else if((newspeed < oldspeed)) // bremsen
-            {
-               if((speed > newspeed) && ((speed + speedintervall) > 0))
-               {
-                  
-                  speed += speedintervall;
-               }
-               else 
-               {
-                  speed = newspeed;
-                  
-               }
-            }
-            // end speed var
-          }
-         */
-         
-         
+          
          if(lokstatus & (1<<CHANGEBIT)) // Motor-Pins tauschen
          {
             if(pwmpin == MOTORA_PIN)
@@ -929,5 +888,5 @@ void main (void)
       
       //OSZIAHI;
    }//while
-   return;
+   return 0;
 }
