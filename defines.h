@@ -12,6 +12,7 @@
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
 #define LOOPLED         4 // 
+#define LEDPWM          50
 
 #define INT0_RISING      0
 #define INT0_FALLING      1
@@ -54,13 +55,6 @@
 #define MOTORB_PIN      1
 
 
-#define DEVPORT   PORTA
-#define DEVDDR    DDRA
-#define DEVPIN    PINA
-
-
-
-
 
 #define LAMPEPORT    PORTA
 #define LAMPEDDR     DDRA
@@ -82,15 +76,25 @@
 #define ADDRESSOK    3
 #define DATAOK       4
 
+#define LED_CHANGEBIT    7
 
 // lokstatus-Bits
-//#define FUNKTION     0
-//#define OLDFUNKTION  1
-//#define FUNKTIONSTATUS 2
 
+#define ADDRESSBIT      0
+#define STARTBIT        1 // Startimpuls
+#define DATABIT         2
+#define PROGBIT         3 // Programmiermodus
+#define FUNKTIONBIT     4
+#define RUNBIT          5
+#define RICHTUNGBIT     6
+#define LOK_CHANGEBIT       7  
 
+#define STARTDELAY      100
+#define STARTWAIT 100
 
+// old
 #define ADDRESSBIT   0
+#define STARTBIT        1 // Startimpuls
 #define BACKBIT      2
 #define VORBIT       3 // eingestellte Richtung
 #define FUNKTIONBIT  4
@@ -116,5 +120,8 @@
 #define INT0_PAKET_B 5
 
 //#define SPEEDFAKTOR 18
+
+#define FIRSTRUN_END 80
+
 
 #endif /* defines_h */
