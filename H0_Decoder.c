@@ -190,7 +190,7 @@ uint8_t speedlookuptable[10][15] =
 volatile uint8_t speedindex = 7;
 
 
-volatile uint8_t   maxspeed =  252;
+volatile uint8_t   maxspeed =  speedlookuptable[speedindex][14];
 
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
@@ -774,7 +774,7 @@ int main (void)
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
-   minspeed = speedlookuptable[9][0];
+   minspeed = speedlookuptable[speedindex][1];
    
    sei();
    while (1)
