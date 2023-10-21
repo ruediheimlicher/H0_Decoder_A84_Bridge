@@ -190,7 +190,7 @@ uint8_t speedlookuptable[10][15] =
 volatile uint8_t speedindex = 7;
 
 
-volatile uint8_t   maxspeed =  speedlookuptable[speedindex][14];
+volatile uint8_t   maxspeed =  0;
 
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
@@ -661,8 +661,12 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 
                            oldspeed = speed; // behalten
                         
-                           speedintervall = (newspeed - speed)>>2; // 8 teile
                             
+                           speedintervall = (newspeed - speed)>>2; // 8 teile
+                            if(speedintervall == 0)
+                            {
+                               speedintervall = 1;
+                            }
                            newspeed = speedlookuptable[speedindex][speedcode]; // zielwert
                             if(speedcode > 0)
                             {
@@ -774,6 +778,7 @@ int main (void)
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
+   maxspeed = speedlookuptable[speedindex][14];
    minspeed = speedlookuptable[speedindex][1];
    
    sei();
