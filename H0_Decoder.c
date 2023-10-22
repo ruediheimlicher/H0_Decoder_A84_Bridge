@@ -183,11 +183,11 @@ uint8_t speedlookuptable[10][15] =
    {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},
    {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},
    {0,41,44,48,53,59,67,77,87,99,113,128,144,161,180},
-   {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},
-   {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}
+   {0,31,34,38,44,51,59,69,81,94,108,124,141,160,180},
+   {0,26,29,33,39,47,55,66,78,91,106,122,140,159,180},
 };
 
-volatile uint8_t speedindex = 7;
+volatile uint8_t speedindex = 9;
 
 
 volatile uint8_t   maxspeed =  0;
@@ -655,17 +655,19 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                             
                             if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
                             {
-                               startspeed = speedlookuptable[speedindex][speedcode] + (speedlookuptable[speedindex][speedcode+1] - speedlookuptable[speedindex][speedcode])/8; // Startimpuls, etwas Zugabe
+                               startspeed = speedlookuptable[speedindex][speedcode] + 2;
+                              // startspeed = speedlookuptable[speedindex][speedcode] + (speedlookuptable[speedindex][speedcode+1] - speedlookuptable[speedindex][speedcode])/8; // Startimpuls, etwas Zugabe
+                               
                                lokstatus |= (1<<STARTBIT);
                             }
 
                            oldspeed = speed; // behalten
                         
                             
-                           speedintervall = (newspeed - speed)>>2; // 8 teile
+                           speedintervall = (newspeed - speed)>>1; // 2 teile
                             if(speedintervall == 0)
                             {
-                               speedintervall = 1;
+                               //speedintervall = 1;
                             }
                            newspeed = speedlookuptable[speedindex][speedcode]; // zielwert
                             if(speedcode > 0)
@@ -819,15 +821,27 @@ int main (void)
             // speed var
             if((newspeed > oldspeed)) // beschleunigen
             {
-               if(speed < newspeed)
+               if(speed < (newspeed))
                {
                   if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
                   {
                      speed = startspeed;
                      lokstatus &= ~(1<<STARTBIT);
                   }
-                  
-                  speed += speedintervall;
+                  else 
+                  {
+                     speed += speedintervall;
+                     /*
+                     if(speedintervall < 4)
+                     {
+                        speed += speedintervall;
+                     }
+                     else 
+                     {
+                        speed += 4;
+                     }
+                      */
+                  }
                }
                else 
                {
