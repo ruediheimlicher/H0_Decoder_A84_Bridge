@@ -135,43 +135,7 @@ volatile uint8_t   wdtcounter = 0;
 
 volatile uint8_t   taskcounter = 0;
 
-// linear
-//volatile uint8_t   speedlookup[15] = {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252};
-
-
-//volatile uint8_t   speedlookup[15] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140};
-// linear 100
-//volatile uint8_t   speedlookup[15] = {0,7,14,21,28,35,42,50,57,64,71,78,85,92,100};
-
-// linear 80
-//volatile uint8_t   speedlookup[15] = {0,5,11,17,22,28,34,40,45,51,57,62,68,74,80};
-
-// linear mit offset 30
-//volatile uint8_t   speedlookup[15] = {0,33,37,40,44,47,51,55,58,62,65,69,72,76,80};
-
-// linear mit offset 22  Diesel
-//volatile uint8_t   speedlookup[15] = {0,26,30,34,38,42,46,51,55,59,63,67,71,75,80};
-
-
-
-// logarithmisch 180
-//volatile uint8_t   speedlookup[14] = {0,46,73,92,106,119,129,138,146,153,159,165,170,175,180};
-
-//log 160
-//volatile uint8_t   speedlookup[14] = {0,40,64,81,95,105,114,122,129,136,141,146,151,155,160};
-
-// log 140
-//volatile uint8_t   speedlookup[14] = {0,35,56,71,83,92,100,107,113,119,123,128,132,136,140};
-
-// log 100
-//volatile uint8_t   speedlookup[14] = {0,25,40,51,59,66,71,76,81,85,88,91,94,97,100};
-
-// log 36/120
-//volatile uint8_t   speedlookup[15] = {0,37,38,41,44,48,52,58,64,72,80,89,98,109,120};
-
-// log 44/120
-//volatile uint8_t   speedlookup[15] = {0,45,46,48,51,55,59,64,70,76,84,92,100,110,120};
-
+/
 uint8_t speedlookuptable[10][15] =
 {
    {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252},
@@ -190,7 +154,7 @@ uint8_t speedlookuptable[10][15] =
 volatile uint8_t speedindex = 7;
 
 
-volatile uint8_t   maxspeed =  speedlookuptable[speedindex][14];
+volatile uint8_t   maxspeed =  0; //speedlookuptable[speedindex][14];
 
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
@@ -203,8 +167,8 @@ volatile uint8_t portahistory = 0xFF;     // default is high because the pull-up
 
 void slaveinit(void)
 {
- 	//OSZIPORT |= (1<<OSZIA);	//Ausgang fuer OSZI A
-	//OSZIDDR |= (1<<OSZIA);	//Ausgang fuer OSZI A
+ 	OSZIPORT |= (1<<OSZIA);	//Ausgang fuer OSZI A
+	OSZIDDR |= (1<<OSZIA);	//Ausgang fuer OSZI A
 
    LOOPLEDDDR |=(1<<LOOPLED); // HI
    LOOPLEDPORT |=(1<<LOOPLED);
@@ -212,9 +176,7 @@ void slaveinit(void)
    DDRA |= (1<<PA4); // output
    PORTA &= ~(1<<PA4);// LO
 
-  // SNIFFDDR &= ~(1<<SNIFF_PIN); // input, detektiert Betriebsspannung
-  // SNIFFPORT &= ~(1<<SNIFF_PIN); // LO
-
+ 
  
    MOTORDDR |= (1<<MOTORA_PIN);  // Output Motor A 
    MOTORPORT |= (1<<MOTORA_PIN); // HI
@@ -655,7 +617,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                             
                             if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
                             {
-                               startspeed = speedlookuptable[speedindex][speedcode] + (speedlookuptable[speedindex][speedcode+1] - speedlookuptable[speedindex][speedcode])/8; // Startimpuls, etwas Zugabe
+                               startspeed = speedlookuptable[speedindex][speedcode] + 1;
+                              // startspeed = speedlookuptable[speedindex][speedcode] + (speedlookuptable[speedindex][speedcode+1] - speedlookuptable[speedindex][speedcode])/8; // Startimpuls, etwas Zugabe
                                lokstatus |= (1<<STARTBIT);
                             }
 
@@ -775,7 +738,7 @@ int main (void)
    wdt_reset();
    ledpwm = LEDPWM;
    minspeed = speedlookuptable[speedindex][1];
-   
+   maxspeed = speedlookuptable[speedindex][14];
    sei();
    while (1)
    {	
@@ -794,7 +757,7 @@ int main (void)
                
             }
             dimmcounter++;
-            if(dimmcounter >= 8)
+            if(dimmcounter > 32)
             {
                LAMPEPORT &= ~(1<<ledonpin); // Lampe-PWM  OFF
                dimmcounter = 0;
