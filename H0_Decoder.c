@@ -29,7 +29,6 @@ uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär (0101)
  */
 
 
-//#define OUTPORT	PORTD		// Ausgang fuer Motor
 
 #define INPORT   PORTB  // Input signal auf INT0
 #define INPIN    PINB  // Input signal
@@ -135,7 +134,7 @@ volatile uint8_t   wdtcounter = 0;
 
 volatile uint8_t   taskcounter = 0;
 
-/
+volatile uint8_t   speedlookup[15] = {};
 uint8_t speedlookuptable[10][15] =
 {
    {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252},
@@ -176,7 +175,15 @@ void slaveinit(void)
    DDRA |= (1<<PA4); // output
    PORTA &= ~(1<<PA4);// LO
 
- 
+   DDRA |= (1<<AUXA); // output
+   PORTA |= (1<<AUXA);// HI
+   DDRA |= (1<<AUXB); // output
+   PORTA |= (1<<AUXB);// HI
+
+   DDRA |= (1<<5);
+   DDRA |= (1<<6);
+   PORTA &= ~(1<<5);
+   PORTA &= ~(1<<6);
  
    MOTORDDR |= (1<<MOTORA_PIN);  // Output Motor A 
    MOTORPORT |= (1<<MOTORA_PIN); // HI
@@ -240,7 +247,7 @@ void timer0 (uint8_t wert)
    //sei();
 } 
 
-
+/*
 void pcint7_init(void)
 {
    DDRA &= ~(1<<PA7); // PA7 input
@@ -249,10 +256,10 @@ void pcint7_init(void)
    GIMSK |= (1<<PCIE0);    // General Interrupt Mask Register enable for pin 0:7
    PCMSK0 |= (1<<PCINT7);  // Pin Change Mask Register  for PA7
 }
-
+*/
 
 // MARK: ISR(PCINT7)
-
+/*
 ISR(PCINT0_vect) 
 {
    if(PINA & (1 << PA7)) // Source OK
@@ -268,20 +275,9 @@ ISR(PCINT0_vect)
          
    }
    
-      /*
-   uint8_t changedbits;
-   
-   changedbits = PINA ^ portahistory;
-   portahistory = PINA;
-   
-   if(changedbits & (1 << PA7))
-       {
-          LOOPLEDPORT ^= (1<<LOOPLED);
-       }
-   
-   */
-   GIFR |= (1<<PCIF0);
+    GIFR |= (1<<PCIF0);
 }
+*/
 
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
@@ -305,23 +301,7 @@ ISR(EXT_INT0_vect)
       
       waitcounter = 0;
       tritposition = 0;
-      //lokadresse = 0;
-      //lokdata = 0;
       funktion = 0;
-      //deflokadresse = 0;
-      //deflokdata = 0;
-
-     /*
-      // parameter resetten
-      lokadresseA = 0;
-      lokadresseB = 0;
-      rawdataA = 0;
-      rawdataB = 0;
-      
-      rawfunktionA=0;
-      rawfunktionB=0;
-      deffunktiondata=0;
-      */
  //     HIimpulsdauer = 0;
       //OSZIAHI;
    } 
@@ -617,16 +597,16 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                             
                             if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
                             {
-                               startspeed = speedlookuptable[speedindex][speedcode] + 1;
-                              // startspeed = speedlookuptable[speedindex][speedcode] + (speedlookuptable[speedindex][speedcode+1] - speedlookuptable[speedindex][speedcode])/8; // Startimpuls, etwas Zugabe
-                               lokstatus |= (1<<STARTBIT);
+                               startspeed = speedlookup[speedcode] + 1; // kleine Zugabe
+                                lokstatus |= (1<<STARTBIT);
                             }
 
                            oldspeed = speed; // behalten
                         
-                           speedintervall = (newspeed - speed)>>2; // 8 teile
+                           speedintervall = (newspeed - speed)>>2; // 4 teile
                             
-                           newspeed = speedlookuptable[speedindex][speedcode]; // zielwert
+                           newspeed = speedlookup[speedcode]; // zielwert
+                           
                             if(speedcode > 0)
                             {
                                lokstatus |= (1<<RUNBIT); // lok in bewegung
@@ -737,15 +717,23 @@ int main (void)
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
-   minspeed = speedlookuptable[speedindex][1];
-   maxspeed = speedlookuptable[speedindex][14];
+   minspeed = 0;//speedlookup[1];
+   maxspeed = speedlookup[14];
+   
+   
+   uint8_t i = 0;
+   for (i=0;i<15;i++)
+   {
+      speedlookup[i] = speedlookuptable[speedindex][i];
+   }
+
    sei();
    while (1)
    {	
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
       {
-         PORTA &= ~(1<<PA4); // LED on
+         //PORTA &= ~(1<<PA4); // LED on
          
          
          if(lokstatus & (1<<FUNKTIONBIT))
@@ -769,15 +757,15 @@ int main (void)
          loopcount1++;
          if (loopcount1 >= speedchangetakt)
          {
-            
-            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            //MOTORPORT ^= (1<<pwmpin); 
+            LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
             
             // speed var
-            if((newspeed > oldspeed)) // beschleunigen
+            if((newspeed > oldspeed)) // beschleunigen, speedintervall positiv
             {
-               if(speed < newspeed)
+               if(speed < (newspeed + speedintervall))
                {
                   if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
                   {
@@ -792,9 +780,9 @@ int main (void)
                   speed = newspeed;
                }
             }
-            else if((newspeed < oldspeed)) // bremsen
+            else if((newspeed < oldspeed)) // bremsen, speedintervall negativ
             {
-               if((speed > newspeed) && ((speed + speedintervall) > 0))
+               if((speed > newspeed) && ((speed + 2*speedintervall) > 0))
                {
                   speed += 2*speedintervall;
                }
@@ -817,7 +805,7 @@ int main (void)
          
          loopcount0=0;
          
-         if(lokstatus & (1<<CHANGEBIT)) // Motor-Pins tauschen
+         if(lokstatus & (1<<LOK_CHANGEBIT)) // Motor-Pins tauschen
          {
             if(pwmpin == MOTORA_PIN)
             {
@@ -853,8 +841,9 @@ int main (void)
             else
             {
                // beide lampen OFF
-               LAMPEPORT &= ~(1<<LAMPEB_PIN); // Lampe B OFF
-               LAMPEPORT &= ~(1<<LAMPEA_PIN); // Lampe A OFF
+               LAMPEPORT &= ~(1<<ledonpin); // // eingeschaltete Lampe  OFF
+              //LAMPEPORT &= ~(1<<LAMPEB_PIN); // Lampe B OFF
+              // LAMPEPORT &= ~(1<<LAMPEA_PIN); // Lampe A OFF
             }
             ledstatus &= ~(1<<LED_CHANGEBIT);
          }

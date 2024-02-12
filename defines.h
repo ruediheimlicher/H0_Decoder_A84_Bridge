@@ -11,7 +11,7 @@
 
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
-#define LOOPLED         4 // 
+#define LOOPLED         0 // 
 #define LEDPWM          50
 
 #define INT0_RISING      0
@@ -42,7 +42,8 @@
 #define TEST1     1
 */
 
-
+#define AUXA   0
+#define AUXB   1
 
 
 #define MOTORPORT   PORTB
@@ -63,13 +64,12 @@
 #define LAMPEA_PIN   2
 #define LAMPEB_PIN   3
 
-#define LEDPWM       50
+
 
 #define SNIFFPORT    PORTA 
 #define SNIFFDDR     DDRA
 #define SNIFFPIN     PINA
 
-#define SNIFF_PIN    7 // detektiert Betriebsspannung
 
 // Bits
 #define FUNKTIONOK   2
@@ -87,7 +87,7 @@
 #define FUNKTIONBIT     4
 #define RUNBIT          5
 #define RICHTUNGBIT     6
-#define LOK_CHANGEBIT       7  
+#define LOK_CHANGEBIT   7  
 
 #define STARTDELAY      100
 #define STARTWAIT 100
@@ -100,7 +100,6 @@
 #define FUNKTIONBIT  4
 #define RUNBIT         5  // Lok hat speed
 #define RICHTUNGBIT  6
-#define CHANGEBIT      7  
 
 //#define STARTDELAY 100
 

@@ -203,7 +203,9 @@ AVRDUDE_PROGRAMMER = stk500v2
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
 #AVRDUDE_PORT = /dev/tty.usbserial-usbserial-A801JIUR    # programmer connected to serial device
+
 AVRDUDE_PORT = /dev/tty.usbserial-AM0190V3
+
 #AVRDUDE_PORT = /dev/tty.usbserial-A801JIUR
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
@@ -228,6 +230,7 @@ AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
 AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
 AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 
+$(info *** $(CURDIR) ***) # or $(shell pwd)
 
 
 #---------------- Debugging Options ----------------
