@@ -11,7 +11,7 @@
 
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
-#define LOOPLED         0 // 
+#define LOOPLED         7 // 
 #define LEDPWM          50
 
 #define INT0_RISING      0
@@ -24,7 +24,7 @@
 #define OSZIPORT  PORTA      // Ausgang fuer OSZI
 #define OSZIDDR   DDRA
 
-#define OSZIA 7           // 
+#define OSZIA  1           // 
 
 
 #define PAKETA   0

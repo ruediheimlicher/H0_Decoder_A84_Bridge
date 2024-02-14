@@ -180,8 +180,8 @@ void slaveinit(void)
    DDRA |= (1<<AUXB); // output
    PORTA |= (1<<AUXB);// HI
 
-   DDRA |= (1<<5);
-   DDRA |= (1<<6);
+ //  DDRA |= (1<<5);
+ //  DDRA |= (1<<6);
    PORTA &= ~(1<<5);
    PORTA &= ~(1<<6);
  
@@ -464,7 +464,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
             else if (INT0status & (1<<INT0_PAKET_B)) // zweites Paket, Werte testen
             {
                
-               
+               OSZIATOG; // zwei pakete da
 // MARK: EQUAL
                if (lokadresseA && ((rawfunktionA == rawfunktionB) && (rawdataA == rawdataB) && (lokadresseA == lokadresseB))) // Lokadresse > 0 und Lokadresse und Data OK
                {
@@ -693,7 +693,6 @@ int main (void)
    slaveinit();
    int0_init();
    
-    
    timer0(4);
    uint16_t loopcount0=0;
    uint16_t loopcount1=0;
@@ -709,9 +708,9 @@ int main (void)
     WDTCSR|=(1<<WDCE)|(1<<WDE);  // https://www.instructables.com/ATtiny85-Watchdog-reboot-Together-With-SLEEP-Andor/
     WDTCSR=0x00; // disable watchdog
     */
-   // #define WDTO_15MS   0
+    #define WDTO_15MS   0
    
-   //  WDTCSR = 0xD8 | WDTO_30MS;
+     WDTCSR = 0xD8 | WDTO_15MS;
    
    
    //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
@@ -730,6 +729,7 @@ int main (void)
    sei();
    while (1)
    {	
+      //OSZIATOG;
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
       {
