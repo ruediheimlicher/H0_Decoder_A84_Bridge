@@ -135,7 +135,7 @@ volatile uint8_t   wdtcounter = 0;
 
 volatile uint8_t   taskcounter = 0;
 
-/
+
 uint8_t speedlookuptable[10][15] =
 {
    {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252},
