@@ -150,7 +150,7 @@ uint8_t speedlookuptable[10][15] =
    {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}
 };
 
-volatile uint8_t speedindex = 7;
+volatile uint8_t speedindex = 8;
 
 
 volatile uint8_t   maxspeed =  0; //speedlookuptable[speedindex][14];
