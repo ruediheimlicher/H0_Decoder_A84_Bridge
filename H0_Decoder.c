@@ -145,7 +145,7 @@ uint8_t speedlookuptable[10][15] =
    
    {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},
    {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},
-   {0,41,44,48,53,59,67,77,87,99,113,128,144,161,180},
+   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180},
    {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},
    {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}
 };
@@ -708,17 +708,15 @@ int main (void)
     WDTCSR|=(1<<WDCE)|(1<<WDE);  // https://www.instructables.com/ATtiny85-Watchdog-reboot-Together-With-SLEEP-Andor/
     WDTCSR=0x00; // disable watchdog
     */
-    #define WDTO_15MS   0
+    //#define WDTO_15MS   0
    
-     WDTCSR = 0xD8 | WDTO_15MS;
+   WDTCSR = 0xD8 | WDTO_30MS;
    
-   
-   //wdt_enable(WDTO_15MS);  // Set watchdog timeout to 15 milliseconds
+   wdt_enable(WDTO_30MS);  // Set watchdog timeout to 30 milliseconds
    wdt_reset();
    ledpwm = LEDPWM;
    minspeed = 0;//speedlookup[1];
    maxspeed = speedlookup[14];
-   
    
    uint8_t i = 0;
    for (i=0;i<15;i++)
@@ -738,7 +736,6 @@ int main (void)
          
          if(lokstatus & (1<<FUNKTIONBIT))
          {
-            
             if(dimmcounter == 3)
             {
                LAMPEPORT |= (1<<ledonpin); // Lampe-PWM  ON
@@ -847,10 +844,6 @@ int main (void)
             }
             ledstatus &= ~(1<<LED_CHANGEBIT);
          }
-
-         
-         
-         
              
          if (deflokadresse == LOK_ADRESSE)
          {

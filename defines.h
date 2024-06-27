@@ -56,7 +56,6 @@
 #define MOTORB_PIN      1
 
 
-
 #define LAMPEPORT    PORTA
 #define LAMPEDDR     DDRA
 #define LAMPEPIN     PINA
