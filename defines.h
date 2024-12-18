@@ -24,7 +24,7 @@
 #define OSZIPORT  PORTA      // Ausgang fuer OSZI
 #define OSZIDDR   DDRA
 
-#define OSZIA  1           // 
+#define OSZIA  1          // 
 
 
 #define PAKETA   0
