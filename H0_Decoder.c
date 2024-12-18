@@ -48,7 +48,7 @@ volatile uint8_t	INT0status=0x00;
 volatile uint8_t  pausestatus=0x00;
 
 volatile uint8_t   ablaufstatus=0x00; // Startdlay
-volatile uint16_t   startwaitcounter = STARTWAIT;
+volatile uint16_t  startwaitcounter = STARTWAIT;
 
 volatile uint8_t   address=0x00; 
 volatile uint8_t   data=0x00;   
@@ -175,8 +175,8 @@ void slaveinit(void)
    DDRA |= (1<<PA4); // output
    PORTA &= ~(1<<PA4);// LO
 
-   DDRA |= (1<<AUXA); // output
-   PORTA |= (1<<AUXA);// HI
+   //DDRA |= (1<<AUXA); // output
+   //PORTA |= (1<<AUXA);// HI
    DDRA |= (1<<AUXB); // output
    PORTA |= (1<<AUXB);// HI
 
@@ -322,6 +322,7 @@ ISR(EXT_INT0_vect)
 // MARK: ISR Timer0
 ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
 {
+  // LOOPLEDPORT ^= (1<<LOOPLED); 
    //OSZIATOG;
    //return;
    if (speed)
@@ -350,6 +351,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       if (waitcounter > 2)// Impulsdauer > minimum, nach einer gewissen Zeit den Stauts abfragen
       {
          //OSZIAHI;
+         //LOOPLEDPORT ^= (1<<LOOPLED); 
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -464,7 +466,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
             else if (INT0status & (1<<INT0_PAKET_B)) // zweites Paket, Werte testen
             {
                
-               OSZIATOG; // zwei pakete da
+               //OSZIATOG; // zwei pakete da
 // MARK: EQUAL
                if (lokadresseA && ((rawfunktionA == rawfunktionB) && (rawdataA == rawdataB) && (lokadresseA == lokadresseB))) // Lokadresse > 0 und Lokadresse und Data OK
                {
@@ -728,6 +730,7 @@ int main (void)
    while (1)
    {	
       //OSZIATOG;
+      //LOOPLEDPORT ^= (1<<LOOPLED); 
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
       {
@@ -736,6 +739,8 @@ int main (void)
          
          if(lokstatus & (1<<FUNKTIONBIT))
          {
+            LAMPEPORT |= (1<<ledonpin); // Lampe-PWM  ON
+            /*
             if(dimmcounter == 3)
             {
                LAMPEPORT |= (1<<ledonpin); // Lampe-PWM  ON
@@ -747,7 +752,13 @@ int main (void)
                LAMPEPORT &= ~(1<<ledonpin); // Lampe-PWM  OFF
                dimmcounter = 0;
             }
+             */
             
+            
+         }
+         else
+         {
+            LAMPEPORT &= ~(1<<ledonpin); // Lampe-PWM  OFF
          }
 
          
@@ -755,7 +766,7 @@ int main (void)
          if (loopcount1 >= speedchangetakt)
          {
             //MOTORPORT ^= (1<<pwmpin); 
-            LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
+            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
             
