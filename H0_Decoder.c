@@ -35,7 +35,7 @@ uint8_t  LOK_ADRESSE = 0xCC; //	11001100	TrinŠr (0101)
 
 #define DATAPIN  2 // PB2, INT0
 
-#define STARTKICK 2 // Verlaengerung erster Puls
+#define STARTKICK 4 // Verlaengerung erster Puls
 
 //volatile uint8_t rxbuffer[buffer_size];
 
@@ -153,7 +153,7 @@ uint8_t speedlookuptable[10][15] =
    
    {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},         // 5
    {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},       // 6
-   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180},      // 7
+   {0,60,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
    {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},    // 8
    {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}     // 9
 };
@@ -339,15 +339,14 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
-      MOTORPORT |= (1<<pwmpin);      
-
+      MOTORPORT |= (1<<pwmpin);    // Motor OFF 
+      
    }
-   
    
    
    if (motorPWM >= 254) //ON, neuer Motorimpuls
    {
-       MOTORPORT &= ~(1<<pwmpin);
+       MOTORPORT &= ~(1<<pwmpin); // Motor ON
 
       motorPWM = 0;
       
@@ -605,19 +604,30 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                                  break;
                                  
                            }
-                           //speed = speedlookup[speedcode];
                             // speedcode ist 1, lok kommt aus stillstand
-                            if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
+                            
+                            oldspeed = speed; // behalten
+                            
+                           // if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
+                            if((speedcode == 1) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt  
                             {
-                               startspeed = speedlookup[speedcode] + STARTKICK; // kleine Zugabe
-                                lokstatus |= (1<<STARTBIT);
+                               speed = speedlookup[1] / 4 * 3;
+                               newspeed = speedlookup[1] + STARTKICK; // kleine Zugabe
+                              //lokstatus |= (1<<STARTBIT);
                             }
 
-                           oldspeed = speed; // behalten
-                        
-                           speedintervall = (newspeed - speed)>>2; // 4 teile
+                           //oldspeed = speed; // behalten
+                            else
+                            {
+                               newspeed = speedlookup[speedcode]; // zielwert
+                            }
                             
-                           newspeed = speedlookup[speedcode]; // zielwert
+                            speedintervall = (newspeed - oldspeed)>>2; // 4 teile
+                            if((speedcode > 2) && (speedintervall > 4) )
+                            {
+                               speedintervall = 4;
+                            }
+                           //newspeed = speedlookup[speedcode]; // zielwert
                            
                             if(speedcode > 0)
                             {
@@ -785,9 +795,11 @@ int main (void)
             {
                if(speed < (newspeed + speedintervall))
                {
+                  
                   if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
                   {
-                     speed = startspeed;
+                     //speed = startspeed;
+                     speed = speedlookup[1];
                      lokstatus &= ~(1<<STARTBIT);
                   }
                   
