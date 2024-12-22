@@ -35,7 +35,7 @@ uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär (0101)
 
 #define DATAPIN  2 // PB2, INT0
 
-
+#define STARTKICK 2 // Verlaengerung erster Puls
 
 //volatile uint8_t rxbuffer[buffer_size];
 
@@ -99,6 +99,14 @@ volatile uint8_t     newspeed = 0;
 volatile uint8_t     minspeed = 0; // Unterster Wert in speedlookup-tabelle
 volatile uint8_t     startspeed = 0; // Anlaufimpuls
 
+
+// 16bit
+volatile uint16_t     oldspeed16 = 0;
+volatile uint16_t     newspeed16 = 0;
+volatile uint16_t     minspeed16 = 0; // Unterster Wert in speedlookup-tabelle
+volatile uint16_t     startspeed16 = 0; // Anlaufimpuls
+volatile uint16_t     speedintervall16 = 0;
+
 volatile int8_t      speedintervall = 0;
 
 volatile uint8_t   dimmcounter = 0; // LED dimmwertcounter
@@ -137,20 +145,20 @@ volatile uint8_t   taskcounter = 0;
 volatile uint8_t   speedlookup[15] = {};
 uint8_t speedlookuptable[10][15] =
 {
-   {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252},
-   {0,30,40,50,60,70,80,90,100,110,120,130,140,150,160},
-   {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140},
-   {0,7,14,21,28,35,42,50,57,64,71,78,85,92,100},
-   {0,33,37,40,44,47,51,55,58,62,65,69,72,76,80},
+   {0,18,36,54,72,90,108,126,144,162,180,198,216,234,252},  // 0
+   {0,30,40,50,60,70,80,90,100,110,120,130,140,150,160},    // 1
+   {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140},      // 2
+   {0,7,14,21,28,35,42,50,57,64,71,78,85,92,100},           // 3
+   {0,33,37,40,44,47,51,55,58,62,65,69,72,76,80},           // 4
    
-   {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},
-   {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},
-   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180},
-   {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},
-   {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}
+   {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},         // 5
+   {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},       // 6
+   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180},      // 7
+   {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},    // 8
+   {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}     // 9
 };
 
-volatile uint8_t speedindex = 8;
+volatile uint8_t speedindex = 7;
 
 
 volatile uint8_t   maxspeed =  0; //speedlookuptable[speedindex][14];
@@ -200,7 +208,7 @@ void slaveinit(void)
 
    
    
-   maxspeed =  254;
+   
 
    pwmpin = MOTORA_PIN;
    richtungpin = MOTORB_PIN;
@@ -334,6 +342,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       MOTORPORT |= (1<<pwmpin);      
 
    }
+   
+   
    
    if (motorPWM >= 254) //ON, neuer Motorimpuls
    {
@@ -546,7 +556,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            {
                               case 0:
                                  speedcode = 0;
-                                 lokstatus &= ~(1<<STARTBIT);
+                                 lokstatus &= ~(1<<STARTBIT); // Stillstand markieren, bereit fuer Start
                                  break;
                               case 0x0C:
                                  speedcode = 1;
@@ -596,10 +606,10 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                                  
                            }
                            //speed = speedlookup[speedcode];
-                            
+                            // speedcode ist 1, lok kommt aus stillstand
                             if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
                             {
-                               startspeed = speedlookup[speedcode] + 1; // kleine Zugabe
+                               startspeed = speedlookup[speedcode] + STARTKICK; // kleine Zugabe
                                 lokstatus |= (1<<STARTBIT);
                             }
 
@@ -725,7 +735,7 @@ int main (void)
    {
       speedlookup[i] = speedlookuptable[speedindex][i];
    }
-
+   maxspeed =  speedlookup[14];
    sei();
    while (1)
    {	
@@ -763,7 +773,7 @@ int main (void)
 
          
          loopcount1++;
-         if (loopcount1 >= speedchangetakt)
+         if (loopcount1 >= speedchangetakt) // speed aendern
          {
             //MOTORPORT ^= (1<<pwmpin); 
             //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
@@ -809,10 +819,8 @@ int main (void)
       if (loopcount0>=refreshtakt)
       {
          //OSZIATOG;
-         //LOOPLEDPORT ^= (1<<LOOPLED); 
-         
+         LOOPLEDPORT ^= (1<<LOOPLED);          
          loopcount0=0;
-         
          if(lokstatus & (1<<LOK_CHANGEBIT)) // Motor-Pins tauschen
          {
             if(pwmpin == MOTORA_PIN)
@@ -834,8 +842,6 @@ int main (void)
             lokstatus &= ~(1<<LOK_CHANGEBIT);
             
          } // if changebit
-         
-         
          
          // Lampen einstellen
          if(ledstatus & (1<<LED_CHANGEBIT))

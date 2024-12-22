@@ -15,7 +15,7 @@
 #define LEDPWM          50
 
 #define INT0_RISING      0
-#define INT0_FALLING      1
+#define INT0_FALLING     1
 
 
 #define SHORT 0 // Abstand im doppelpaket
@@ -24,7 +24,7 @@
 #define OSZIPORT  PORTA      // Ausgang fuer OSZI
 #define OSZIDDR   DDRA
 
-#define OSZIA  1          // 
+#define OSZIA     1          // 
 
 
 #define PAKETA   0
@@ -89,7 +89,7 @@
 #define LOK_CHANGEBIT   7  
 
 #define STARTDELAY      100
-#define STARTWAIT 100
+#define STARTWAIT       100
 
 // old
 #define ADDRESSBIT   0
