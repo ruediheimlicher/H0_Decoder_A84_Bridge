@@ -81,6 +81,7 @@
 
 #define MAX_EEPROM      512
 
+// defines fuer lokstatus
 #define ADDRESSBIT      0
 #define STARTBIT        1 // Startimpuls
 #define DATABIT         2
@@ -93,14 +94,12 @@
 #define STARTDELAY      100
 #define STARTWAIT       100
 
-// old
-#define ADDRESSBIT   0
-#define STARTBIT        1 // Startimpuls
-#define BACKBIT      2
-#define VORBIT       3 // eingestellte Richtung
-#define FUNKTIONBIT  4
-#define RUNBIT         5  // Lok hat speed
-#define RICHTUNGBIT  6
+// defines fuer richtungstatus
+#define RICHTUNGCHANGESTARTBIT  0
+#define RICHTUNGCHANGEOKBIT  1
+
+
+
 
 //#define STARTDELAY 100
 
