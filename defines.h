@@ -8,7 +8,7 @@
 #ifndef defines_h
 #define defines_h
 
-
+#define MAX_EEPROM      512
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
 #define LOOPLED         7 // 
@@ -24,7 +24,7 @@
 #define OSZIPORT  PORTA      // Ausgang fuer OSZI
 #define OSZIDDR   DDRA
 
-#define OSZIA     1          // 
+#define OSZIA     0          // 
 
 
 #define PAKETA   0

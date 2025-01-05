@@ -12,7 +12,9 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <avr/eeprom.h>
 #include "defines.h"
+
 //***********************************
 						
 uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär (0101)
@@ -35,7 +37,7 @@ uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär (0101)
 
 #define DATAPIN  2 // PB2, INT0
 
-#define STARTKICK 4 // Verlaengerung erster Puls
+#define STARTKICK 10 // Verlaengerung erster Puls
 
 //volatile uint8_t rxbuffer[buffer_size];
 
@@ -153,7 +155,9 @@ uint8_t speedlookuptable[10][15] =
    
    {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},         // 5
    {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},       // 6
-   {0,60,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
+   
+   {0,62,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
+   
    {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},    // 8
    {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}     // 9
 };
@@ -171,6 +175,9 @@ uint16_t speedchangetakt = 0x400; // takt fuer beschleunigen/bremsen
 
 // https://stackoverflow.com/questions/70049553/best-way-to-handle-multiple-pcint-in-avr
 volatile uint8_t portahistory = 0xFF;     // default is high because the pull-up
+
+uint8_t lasteepromaddress = MAX_EEPROM - 1; // letzte benutzte Adresse, max je nach typ
+uint8_t lasteepromdata = 0;
 
 void slaveinit(void)
 {
@@ -206,15 +213,18 @@ void slaveinit(void)
    LAMPEDDR |= (1<<LAMPEB_PIN);  // Lampe B
    LAMPEPORT &= ~(1<<LAMPEB_PIN); // LO
 
-   
-   
-   
-
+ 
    pwmpin = MOTORA_PIN;
    richtungpin = MOTORB_PIN;
    ledonpin = LAMPEA_PIN;
    ledoffpin = LAMPEB_PIN;
    
+   // EEPROM
+   while (eeprom_read_byte(&lasteepromaddress) == 0xFF)
+   {
+      lasteepromaddress--;
+   }
+   lasteepromdata = (uint8_t)eeprom_read_byte(&lasteepromaddress);
 
 }
 
@@ -344,7 +354,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    
    
-   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   if (motorPWM >= 250) //ON, neuer Motorimpuls
    {
        MOTORPORT &= ~(1<<pwmpin); // Motor ON
 
@@ -445,17 +455,18 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                
             }
          }
-         
+         /*
          // Paket anzeigen
          if (INT0status & (1<<INT0_PAKET_B))
          {
             //           TESTPORT |= (1<<TEST2);
          }
+         
          if (INT0status & (1<<INT0_PAKET_A))
          {
             //           TESTPORT |= (1<<TEST1);
          }
-         
+         */
          
          if (tritposition < 17)
          {
@@ -556,6 +567,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                               case 0:
                                  speedcode = 0;
                                  lokstatus &= ~(1<<STARTBIT); // Stillstand markieren, bereit fuer Start
+                                 lokstatus &= ~(1<<RUNBIT); 
                                  break;
                               case 0x0C:
                                  speedcode = 1;
@@ -611,7 +623,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            // if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
                             if((speedcode == 1) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt  
                             {
-                               speed = speedlookup[1] / 4 * 3;
+                               speed = speedlookup[1] / 8 * 7;
                                newspeed = speedlookup[1] + STARTKICK; // kleine Zugabe
                               //lokstatus |= (1<<STARTBIT);
                             }
@@ -721,8 +733,8 @@ int main (void)
    
    
    //_delay_ms(2);
-   oldfunktion = 0x03; // 0x02
-   oldlokdata = 0xCC; // 
+   //oldfunktion = 0x03; // 0x02
+   //oldlokdata = 0xCC; // 
    
    // WDT
    // https://bigdanzblog.wordpress.com/2015/07/20/resetting-rebooting-attiny85-with-watchdog-timer-wdt/
@@ -746,6 +758,9 @@ int main (void)
       speedlookup[i] = speedlookuptable[speedindex][i];
    }
    maxspeed =  speedlookup[14];
+   
+   //speed = speedlookup[1] / 4 * 3;
+   
    sei();
    while (1)
    {	
@@ -785,10 +800,11 @@ int main (void)
          loopcount1++;
          if (loopcount1 >= speedchangetakt) // speed aendern
          {
+            
             //MOTORPORT ^= (1<<pwmpin); 
             //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
-            //OSZIATOG;
+            OSZIATOG;
             
             // speed var
             if((newspeed > oldspeed)) // beschleunigen, speedintervall positiv
@@ -796,7 +812,9 @@ int main (void)
                if(speed < (newspeed + speedintervall))
                {
                   
-                  if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
+                  //if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
+                  if((lokstatus & (1<<STARTBIT))) // Startimpuls
+
                   {
                      //speed = startspeed;
                      speed = speedlookup[1];
@@ -820,6 +838,7 @@ int main (void)
                {
                   speed = newspeed;
                }
+              
             }
             // end speed var
          } // loopcount1 >= speedchangetakt
