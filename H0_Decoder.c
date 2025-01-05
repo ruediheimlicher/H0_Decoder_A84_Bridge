@@ -167,8 +167,8 @@ volatile uint8_t   maxspeed =  0; //speedlookuptable[speedindex][14];
 
 volatile uint8_t   lastDIR =  0;
 uint8_t loopledtakt = 0x40;
-uint8_t refreshtakt = 0x40;
-uint16_t speedchangetakt = 0x400; // takt fuer beschleunigen/bremsen
+uint8_t refreshtakt = 0x50;
+uint16_t speedchangetakt = 0x150; // takt fuer beschleunigen/bremsen
 
 
 // https://stackoverflow.com/questions/70049553/best-way-to-handle-multiple-pcint-in-avr
@@ -783,7 +783,7 @@ int main (void)
             //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
             loopcount1 = 0;
             //OSZIATOG;
-            
+            // MARK: SPEED VAR
             // speed var
             if((newspeed > oldspeed)) // beschleunigen, speedintervall positiv
             {
