@@ -153,7 +153,9 @@ uint8_t speedlookuptable[10][15] =
    
    {0,41,42,44,47,51,56,61,67,74,82,90,99,109,120},         // 5
    {0,41,43,45,49,54,60,66,74,82,92,103,114,127,140},       // 6
+   
    {0,60,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
+   
    {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},    // 8
    {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}     // 9
 };
@@ -171,6 +173,11 @@ uint16_t speedchangetakt = 0x400; // takt fuer beschleunigen/bremsen
 
 // https://stackoverflow.com/questions/70049553/best-way-to-handle-multiple-pcint-in-avr
 volatile uint8_t portahistory = 0xFF;     // default is high because the pull-up
+
+uint16_t lasteepromaddress = MAX_EEPROM - 1; // letzte benutzte Adresse, max je nach typ
+uint8_t lasteepromdata = 0;
+
+
 
 void slaveinit(void)
 {
@@ -344,7 +351,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    }
    
    
-   if (motorPWM >= 254) //ON, neuer Motorimpuls
+   if (motorPWM >= 250) //ON, neuer Motorimpuls
    {
        MOTORPORT &= ~(1<<pwmpin); // Motor ON
 
@@ -556,6 +563,8 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                               case 0:
                                  speedcode = 0;
                                  lokstatus &= ~(1<<STARTBIT); // Stillstand markieren, bereit fuer Start
+                                 lokstatus &= ~(1<<RUNBIT); 
+
                                  break;
                               case 0x0C:
                                  speedcode = 1;
@@ -721,8 +730,8 @@ int main (void)
    
    
    //_delay_ms(2);
-   oldfunktion = 0x03; // 0x02
-   oldlokdata = 0xCC; // 
+   //oldfunktion = 0x03; // 0x02
+   //oldlokdata = 0xCC; // 
    
    // WDT
    // https://bigdanzblog.wordpress.com/2015/07/20/resetting-rebooting-attiny85-with-watchdog-timer-wdt/
@@ -754,26 +763,11 @@ int main (void)
       // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       wdt_reset();
       {
-         //PORTA &= ~(1<<PA4); // LED on
-         
-         
+          
          if(lokstatus & (1<<FUNKTIONBIT))
          {
             LAMPEPORT |= (1<<ledonpin); // Lampe-PWM  ON
-            /*
-            if(dimmcounter == 3)
-            {
-               LAMPEPORT |= (1<<ledonpin); // Lampe-PWM  ON
-               
-            }
-            dimmcounter++;
-            if(dimmcounter > 32)
-            {
-               LAMPEPORT &= ~(1<<ledonpin); // Lampe-PWM  OFF
-               dimmcounter = 0;
-            }
-             */
-            
+              
             
          }
          else

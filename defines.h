@@ -79,6 +79,8 @@
 
 // lokstatus-Bits
 
+#define MAX_EEPROM      512
+
 #define ADDRESSBIT      0
 #define STARTBIT        1 // Startimpuls
 #define DATABIT         2
