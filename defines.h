@@ -101,6 +101,7 @@
 
 
 
+
 //#define STARTDELAY 100
 
 #define TRIT0 0
@@ -119,6 +120,9 @@
 #define INT0_PAKET_B 5
 
 //#define SPEEDFAKTOR 18
+
+#define FIRSTRUNBIT 0
+
 
 #define FIRSTRUN_END 80
 
