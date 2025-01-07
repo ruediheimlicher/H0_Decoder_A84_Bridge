@@ -98,6 +98,7 @@
 #define RICHTUNGCHANGESTARTBIT  0
 #define RICHTUNGCHANGEOKBIT  1
 
+#define STARTINDEX 2 // Index fuer Anlauf
 
 
 

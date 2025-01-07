@@ -106,7 +106,7 @@ volatile uint8_t     speed = 0;
 volatile uint8_t     oldspeed = 0;
 volatile uint8_t     newspeed = 0;
 volatile uint8_t     minspeed = 0; // Unterster Wert in speedlookup-tabelle
-volatile uint8_t     startspeed = 0; // Anlaufimpuls
+volatile uint8_t     startspeed = 1; // Anlaufimpuls
 
 
 // 16bit
@@ -164,11 +164,11 @@ uint8_t speedlookuptable[10][15] =
    
    {0,60,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
    
-   {0,42,45,50,57,65,75,87,101,116,134,153,173,196,220},    // 8
-   {0,42,45,51,58,68,79,93,108,125,144,165,188,213,240}     // 9
+   {0,32,38,46,57,65,75,87,101,116,134,153,173,196,220},    // 8
+   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180}    // 9 
 };
-
-volatile uint8_t speedindex = 7;
+// {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180}
+volatile uint8_t speedindex = 8;
 
 
 volatile uint8_t   maxspeed =  0; //speedlookuptable[speedindex][14];
@@ -191,6 +191,22 @@ volatile uint8_t   loopstatus=0x00;
 uint16_t firstruncount0=0;
 uint16_t firstruncount1=0;
 
+void watchdogSetup(void) 
+{
+    // Reset the watchdog reset flag
+    wdt_reset();
+    wdt_enable(WDTO_4S);
+    // Enable interrupts instead of reset
+    WDTCSR |= (1 << WDIE);
+}
+
+ISR(WDT_vect) {
+   OSZIATOG;
+/* ReEnable the watchdog interrupt,
+ * as this gets reset when entering this ISR and automatically enables the WDE signal
+ * that resets the MCU the next time the  timer overflows */
+  WDTCSR |= (1<<WDIE);
+}
 
 void slaveinit(void)
 {
@@ -330,11 +346,8 @@ ISR(EXT_INT0_vect)
 
 
 // MARK: ISR Timer0
-ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
+ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
 {
-  // LOOPLEDPORT ^= (1<<LOOPLED); 
-   //OSZIATOG;
-   //return;
    if (speed)
    {
       motorPWM++;
@@ -342,18 +355,13 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
    if ((motorPWM > speed) || (speed == 0)) // Impulszeit abgelaufen oder speed ist 0
    {
       MOTORPORT |= (1<<pwmpin);    // Motor OFF 
-      
    }
-   
    
    if (motorPWM >= 250) //ON, neuer Motorimpuls
    {
-       MOTORPORT &= ~(1<<pwmpin); // Motor ON
-
-      motorPWM = 0;
-      
+      MOTORPORT &= ~(1<<pwmpin); // Motor ON
+      motorPWM = 0;      
    }
-   
    
    // MARK: TIMER0 TIMER0_COMPA INT0
    if (INT0status & (1<<INT0_WAIT))
@@ -361,8 +369,6 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       waitcounter++; 
       if (waitcounter > 2)// Impulsdauer > minimum, nach einer gewissen Zeit den Stauts abfragen
       {
-         //OSZIAHI;
-         //LOOPLEDPORT ^= (1<<LOOPLED); 
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -533,14 +539,14 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                            richtungstatus = 0;
                         }
 // MARK: speed           
-                         {
+                        {
                            switch (deflokdata)
                            {
                               case 0:
                                  speedcode = 0;
                                  lokstatus &= ~(1<<STARTBIT); // Stillstand markieren, bereit fuer Start
                                  lokstatus &= ~(1<<RUNBIT); 
-
+                                 
                                  break;
                               case 0x0C:
                                  speedcode = 1;
@@ -587,48 +593,44 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
                               default:
                                  speedcode = 0;
                                  break;
-                                 
                            }
-                            // speedcode ist 1, lok kommt aus stillstand
-                            
-                            oldspeed = speed; // behalten
-                            newspeed = speedlookup[speedcode]; // solllwert
-                            
-                           // if(speedcode && (speedcode < 2) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt
-                            if((speedcode == 1) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // noch nicht gesetzt  
-                            {
-                               speed = speedlookup[1] / 2;
-                               newspeed = speedlookup[1]; // kleine Zugabe
-                              //lokstatus |= (1<<STARTBIT);
-                            }
-                            else
-                            {
-                               newspeed = speedlookup[speedcode]; // zielwert
-                            }
-                            
-                            speedintervall = (newspeed - oldspeed)>>2; // 4 teile
-                            if((speedcode > 2) && (speedintervall > 4) )
-                            {
-                               speedintervall = 4;
-                            }
+                           // speedcode ist 1, lok kommt aus stillstand
                            
-                            if(speedcode > 0)
-                            {
-                               lokstatus |= (1<<RUNBIT); // lok in bewegung
-                            }
-                            else
-                            {
-                               lokstatus &= ~(1<<RUNBIT); // lok steht still
-                            }
+                           oldspeed = speed; // behalten
+                           newspeed = speedlookup[speedcode]; // solllwert
+                           // MARK: STARTBEDINGUNG
+                           if((speedcode == 1) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // Start, noch nicht gesetzt  
+                           {
+                              startspeed = speedlookup[STARTINDEX] ;
+                              oldspeed = speedlookup[1] / 2;
+                              newspeed = speedlookup[1]; // kleine Zugabe
+                              lokstatus |= (1<<STARTBIT);
+                           }
+                           else
+                           {
+                              newspeed = speedlookup[speedcode]; // zielwert
+                           }
                            
+                           speedintervall = (newspeed - oldspeed)>>2; // 4 teile
+                           if((speedcode > 2) && (speedintervall > 4) )
+                           {
+                              speedintervall = 4;
+                           }
+                           
+                           if(speedcode > 0)
+                           {
+                              lokstatus |= (1<<RUNBIT); // lok in bewegung
+                           }
+                           else
+                           {
+                              lokstatus &= ~(1<<RUNBIT); // lok steht still
+                           }
                         }
                      }
-                     
                   }
                   else 
                   {
                      // aussteigen
- 
                      INT0status = 0;
                      return;
                   }
@@ -685,6 +687,7 @@ ISR(TIM0_COMPA_vect) // Schaltet Impuls an MOTORB_PIN LO wenn speed
       }
       
    } // input LO
+   //OSZIAHI;
 } // ISR (TIM0)
 
 // EEPROM
@@ -725,37 +728,13 @@ uint8_t EEPROM_read(uint16_t address) {
 
 int main (void) 
 {
-   //WDT ausschalten 
-   MCUSR = 0;
-   wdt_disable();
-     //   lastDIR = 1;
-   loopstatus |= (1<<FIRSTRUNBIT);
+   //loopstatus |= (1<<FIRSTRUNBIT);
    
    slaveinit();
-   //_delay_ms(10);
-   
-   
-   //_delay_ms(5);
-   //timer0(4);
-   //_delay_ms(20);
-   //int0_init();
-   //sei();
-   //_delay_ms(30);
    
    uint16_t loopcount0=0;
    uint16_t loopcount1=0;
-   //OSZIAHI;
-   //_delay_ms(200);
-   //_delay_ms(2);
-   //oldfunktion = 0x03; // 0x02
-   //oldlokdata = 0xCC; // 
    
-   // WDT
-   // https://bigdanzblog.wordpress.com/2015/07/20/resetting-rebooting-attiny85-with-watchdog-timer-wdt/
-    
-   
-   ledpwm = LEDPWM;
-  
    
    uint8_t i = 0;
    for (i=0;i<15;i++)
@@ -767,56 +746,24 @@ int main (void)
    
    // EEPROM
    // naechste Adresse fuer save Status
-   //wdt_reset();
-   
-      for (uint16_t loc = 0;loc < MAX_EEPROM; loc++)
-      {   
-         uint8_t locdata = EEPROM_Read(loc);
-         if(locdata == 0xFF)
-         {
-            //lcd_putint(loc);
-            //lcd_putc(' ');
-            //lcd_puthex(locdata);
-            if(loc)
-            {
-               //lcd_putc(' ');
-               //lcd_puthex(EEPROM_Read(loc - 1));
-            }
-            saveEEPROM_Addresse = loc;
-            break;
-
-         }
+    for (uint16_t loc = 0;loc < MAX_EEPROM; loc++)
+   {   
+      uint8_t locdata = EEPROM_Read(loc);
+      if(locdata == 0xFF)
+      {
+         saveEEPROM_Addresse = loc;
+         break;
       }
-      
+   }
+   wdt_reset();
    
    if(saveEEPROM_Addresse)
    {
-      
-      /*
-      lcd_puts("last ");
-      lcd_putc('A');
-      lcd_putc(':');
-      lcd_putint(saveEEPROM_Addresse);
-      lcd_putc(' ');
-      lcd_putc('S');
-      lcd_putc(':');
-       */
       EEPROM_lastsavedstatus = EEPROM_Read(saveEEPROM_Addresse - 1);
-      //lcd_puthex(EEPROM_lastsavedstatus); // letzter gespeicherter Stetus
-    // last data
-   
-      //lcd_gotoxy(0,1);
-      //lcd_putc('L');
-      //lcd_putc(':');
+      // last data
       uint8_t lastlampecode = (EEPROM_lastsavedstatus & 0x03) ;
-      //lcd_puthex(lastlampecode);
-      //lcd_putc(' ');
-      //lcd_putc('D');
-      //lcd_putc(':');
-      uint8_t lastdircode = (EEPROM_lastsavedstatus & 0x0C) >> 2;
-      //lcd_putc('*');
-      //lcd_puthex(lastdircode);
-       
+       uint8_t lastdircode = (EEPROM_lastsavedstatus & 0x0C) >> 2;
+      
       if (lastdircode == 2)
       {
          pwmpin = MOTORA_PIN;
@@ -832,69 +779,48 @@ int main (void)
          ledoffpin = LAMPEA_PIN;
       }
       /*
-      lampe A: bit 1
-      lampe B: bit 0
-
-      motor A: bit 2 lastdircode = 1
-      motor B: bit 3 lastdircode = 2
-      */
-      // speed
-
-   }
+       lampe A: bit 1
+       lampe B: bit 0
+       
+       motor A: bit 2 lastdircode = 1
+       motor B: bit 3 lastdircode = 2
+       */
+    }
    else // default
    {
-      wdt_reset();
-      //lcd_putc('*');
-     // lcd_puts("first");
       pwmpin = MOTORA_PIN;
       richtungpin = MOTORB_PIN;
       ledonpin = LAMPEA_PIN;
       ledoffpin = LAMPEB_PIN;
    }
-  
-
+      
+   wdt_reset();
    int0_init();
    timer0(4);
-   _delay_ms(200);
+   sei();
+   
    
    // MARK: WHILE
-   sei();
    while (1) // 150us
    {	
-      wdt_reset();
       if(loopstatus & (1<<FIRSTRUNBIT))
       {
+         //OSZIALO;
+         _delay_ms(2);
+         //OSZIAHI;
          firstruncount0++;
-         if (firstruncount0>=0x04)
+         if (firstruncount0>=0x02)
          {
-            
-
+              
             firstruncount0=0;
             // Takt for display
             firstruncount1++;
-            
-            //if (firstruncount1 >= 0x0)
-            {
-               //slaveinit();
-               //int0_init();
-               //_delay_ms(500);
-               //timer0(4);
-               OCR0A = 4;
-
-               //sei();
-               
-               loopstatus &= ~(1<<FIRSTRUNBIT);
-               
-               // OSZI_A_HI();
-            }
-            //OSZI_A_HI();
+              //OSZI_A_HI();
+            loopstatus &= ~(1<<FIRSTRUNBIT);
          }
          
       }// end firstrun
-      
-      
-      //LOOPLEDPORT ^= (1<<LOOPLED); 
-      // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
+        // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       
       {
          loopcount1++;
@@ -905,18 +831,15 @@ int main (void)
          // ************************************************
          if (loopcount1 >= speedchangetakt) // speed aendern
          {
-            OSZIATOG;
-            // lcdcounter++;
-            //LOOPLEDPORT ^= (1<<LOOPLED); // Kontrolle lastDIR
-            loopcount1 = 0;
-            
+             loopcount1 = 0;
             
             // MARK: SPEED VAR
             // speed var
             if((newspeed > speed)) // beschleunigen, speedintervall positiv
             {
+               //OSZIALO;
                //OSZI_B_LO();
-               if(speed < (newspeed - speedintervall))
+               if(speed < (newspeed - speedintervall)) 
                {
                   if((startspeed > speed) && (lokstatus & (1<<STARTBIT))) // Startimpuls
                   {
@@ -927,12 +850,16 @@ int main (void)
                   {
                      speed += speedintervall;
                   }
+                  
                }
                else 
                {
+                  
                   speed = newspeed;
+                  
                }
-               //OSZI_B_HI();
+               OSZIAHI;
+               
             }
             else if((newspeed < speed)) // bremsen, speedintervall negativ
             {
