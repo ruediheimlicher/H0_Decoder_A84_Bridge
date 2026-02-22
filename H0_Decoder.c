@@ -6,6 +6,8 @@
 //  Copyright __MyCompanyName__ 2007. All rights reserved.
 //
 
+#include <stdio.h>
+#include <stdint.h>
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -18,9 +20,14 @@
 #include "lcd.c"
 //***********************************
 						
-uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär (0101)
+uint8_t  LOK_ADRESSE = 0xCC; //	11001100	Trinär DIP: (0101)  Ae6/6 GR
+
+//uint8_t  LOK_ADRESSE = 0xF0; //   11110000   Trinär (1100)  Dampflok Vinv (?)
+
+//uint8_t  LOK_ADRESSE = 0b11110000; //   11110000 
 
 
+//n ^ ((1 << 31) - 1)
 //									
 //***********************************
 
@@ -165,7 +172,7 @@ uint8_t speedlookuptable[10][15] =
    {0,60,65,70,77,90,105,122,140,159,170,188,200,210,220},  // 7
    
    {0,32,38,46,57,65,75,87,101,116,134,153,173,196,220},    // 8
-   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180}    // 9 
+   {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180}       // 9 
 };
 // {0,25,28,32,38,46,55,65,77,90,105,122,140,159,180}
 volatile uint8_t speedindex = 8;
@@ -201,7 +208,7 @@ void watchdogSetup(void)
 }
 
 ISR(WDT_vect) {
-   OSZIATOG;
+  // OSZIATOG;
 /* ReEnable the watchdog interrupt,
  * as this gets reset when entering this ISR and automatically enables the WDE signal
  * that resets the MCU the next time the  timer overflows */
@@ -285,25 +292,6 @@ void pcint7_init(void)
 */
 
 // MARK: ISR(PCINT7)
-/*
-ISR(PCINT0_vect) 
-{
-   if(PINA & (1 << PA7)) // Source OK
-   {
-      //LOOPLEDPORT &= ~(1<<LOOPLED);
-      PORTA &= ~(1<<PA4);
-      
-   }
-      else // source down
-      {
-      //LOOPLEDPORT |= (1<<LOOPLED);
-      PORTA |= (1<<PA4);
-         
-   }
-   
-    GIFR |= (1<<PCIF0);
-}
-*/
 
 // MARK: ISR(EXT_INT0_vect) 
 ISR(EXT_INT0_vect) 
@@ -369,6 +357,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
       waitcounter++; 
       if (waitcounter > 2)// Impulsdauer > minimum, nach einer gewissen Zeit den Stauts abfragen
       {
+         //OSZIATOG;
          INT0status &= ~(1<<INT0_WAIT);
          if (INT0status & (1<<INT0_PAKET_A))
          {
@@ -485,7 +474,8 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                   if (lokadresseB == LOK_ADRESSE)
                   {
                      // Daten uebernehmen
-                     
+                     //OSZIATOG;
+                     //LOOPLEDPORT ^=(1<<LOOPLED);
                      lokstatus |= (1<<ADDRESSBIT);
                      deflokadresse = lokadresseB;
                      deffunktion = rawfunktionB;
@@ -519,7 +509,6 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                      if (deflokdata == 0x03) // Wert 1, > Richtung togglen
                      {
                         if (richtungstatus == 0) // letzter Richtungswechel ist abgeschlossen
-                        
                         {
                            richtungstatus |= (1<<RICHTUNGCHANGESTARTBIT); // Vorgang starten, speed auf 0 setzen
                         
@@ -532,8 +521,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                      
                      else  // speed anpassen
                      {  
-                        // richtungswechsel resetten bei erfolg
-                        
+                        // richtungswechselauftrag resetten bei erfolg
                         if(richtungstatus &(1<<RICHTUNGCHANGEOKBIT)) // richtungswechsel ist erfolgt
                         {
                            richtungstatus = 0;
@@ -691,6 +679,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
 } // ISR (TIM0)
 
 // EEPROM
+
 // Funktion, um ein Byte in den EEPROM zu schreiben
 void EEPROM_Write(uint16_t address, uint8_t data) {
     eeprom_update_byte((uint8_t*)address, data);
@@ -730,6 +719,14 @@ int main (void)
 {
    //loopstatus |= (1<<FIRSTRUNBIT);
    
+   uint8_t value = 0xCC;  // Example value: 170 in decimal
+   uint8_t inverted = ~value;   // Bitwise NOT operation
+
+   printf("Original:  0x%02X (%u)\n", value, value);
+   printf("Inverted:  0x%02X (%u)\n", inverted, inverted);
+
+
+   
    slaveinit();
    
    uint16_t loopcount0=0;
@@ -761,8 +758,8 @@ int main (void)
    {
       EEPROM_lastsavedstatus = EEPROM_Read(saveEEPROM_Addresse - 1);
       // last data
-      uint8_t lastlampecode = (EEPROM_lastsavedstatus & 0x03) ;
-       uint8_t lastdircode = (EEPROM_lastsavedstatus & 0x0C) >> 2;
+      uint8_t lastdircode = (EEPROM_lastsavedstatus & 0x0C) >> 2;
+      
       
       if (lastdircode == 2)
       {
@@ -778,13 +775,6 @@ int main (void)
          ledonpin = LAMPEB_PIN;
          ledoffpin = LAMPEA_PIN;
       }
-      /*
-       lampe A: bit 1
-       lampe B: bit 0
-       
-       motor A: bit 2 lastdircode = 1
-       motor B: bit 3 lastdircode = 2
-       */
     }
    else // default
    {
@@ -793,7 +783,8 @@ int main (void)
       ledonpin = LAMPEA_PIN;
       ledoffpin = LAMPEB_PIN;
    }
-      
+   // EEPROM
+   
    wdt_reset();
    int0_init();
    timer0(4);
@@ -832,7 +823,7 @@ int main (void)
          if (loopcount1 >= speedchangetakt) // speed aendern
          {
              loopcount1 = 0;
-            
+            LOOPLEDPORT ^=(1<<LOOPLED);
             // MARK: SPEED VAR
             // speed var
             if((newspeed > speed)) // beschleunigen, speedintervall positiv
@@ -858,7 +849,7 @@ int main (void)
                   speed = newspeed;
                   
                }
-               OSZIAHI;
+               //OSZIAHI;
                
             }
             else if((newspeed < speed)) // bremsen, speedintervall negativ

@@ -11,7 +11,7 @@
 
 #define LOOPLEDPORT     PORTA
 #define LOOPLEDDDR      DDRA
-#define LOOPLED         7 // 
+#define LOOPLED         1 // 
 #define LEDPWM          50
 
 #define INT0_RISING      0
