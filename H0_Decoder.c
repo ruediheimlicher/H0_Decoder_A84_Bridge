@@ -527,7 +527,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                            richtungstatus = 0;
                         }
 // MARK: speed           
-                        {
+                        
                            switch (deflokdata)
                            {
                               case 0:
@@ -584,7 +584,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                            }
                            // speedcode ist 1, lok kommt aus stillstand
                            
-                           oldspeed = speed; // behalten
+                           oldspeed = speed; // istwert behalten
                            newspeed = speedlookup[speedcode]; // solllwert
                            // MARK: STARTBEDINGUNG
                            if((speedcode == 1) && !(lokstatus & (1<<STARTBIT))  && !(lokstatus & (1<<RUNBIT))) // Start, noch nicht gesetzt  
@@ -613,17 +613,19 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
                            {
                               lokstatus &= ~(1<<RUNBIT); // lok steht still
                            }
-                        }
-                     }
-                  }
-                  else 
+                        
+                        
+                        
+                     } // speed anpassen
+                  } // if (lokadresseB == LOK_ADRESSE)
+                  else // Lok stimmt nicht
                   {
                      // aussteigen
                      INT0status = 0;
                      return;
                   }
-               }
-               else 
+               } //  if (lokadresseA &&
+               else // Lok stimmt nicht
                {
                   lokstatus &= ~(1<<ADDRESSBIT);
                   // aussteigen
@@ -676,7 +678,7 @@ ISR(TIM0_COMPA_vect) // max 10 us   Schaltet Impuls an MOTORB_PIN LO wenn speed
       
    } // input LO
    //OSZIAHI;
-} // ISR (TIM0)
+} // ISR (INT0)
 
 // EEPROM
 
@@ -813,7 +815,7 @@ int main (void)
       }// end firstrun
         // Timing: loop: 40 us, takt 85us, mit if-teil 160 us
       
-      {
+      
          loopcount1++;
          
          // MARK: SPEEDCHANGETAKT
@@ -1002,8 +1004,7 @@ int main (void)
             
          } // loopcount1 >= speedchangetakt // loopcount1 >= speedchangetakt
          
-      }// Source OK
-      
+     
       
       loopcount0++;
       
