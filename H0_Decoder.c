@@ -916,18 +916,7 @@ int main (void)
                         EEPROM_savestatus &= ~(1<<MOTORB_PIN);
                         EEPROM_savestatus |= (1<<MOTORA_PIN);
                         
-                        if(lokstatus & (1<<FUNKTIONBIT)) // Funktion ist 1, einschalten
-                        {
-                           EEPROM_savestatus |= (1<<LAMPEB_PIN);
-                           EEPROM_savestatus &= ~(1<<LAMPEA_PIN);
-                        }
-                        else // funktion ist 0, ausschalten
-                        {
-                           // beide lampen OFF
-                           EEPROM_savestatus &= ~(1<<LAMPEB_PIN);
-                           EEPROM_savestatus &= ~(1<<LAMPEA_PIN);
-                        }
-                        
+                          
                      }
                      //OSZIALO;
                      EEPROM_Write(saveEEPROM_Addresse,EEPROM_savestatus);
